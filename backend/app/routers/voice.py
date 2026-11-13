@@ -70,7 +70,9 @@ async def wake_status() -> JSONResponse:
         "stt_loaded": _engine_state["stt_loaded"],
         "tts_engine": config.TTS_ENGINE,
         "tts_voice": (
-            config.EDGE_TTS_VOICE
+            config.ELEVENLABS_VOICE_ID
+            if (config.TTS_ENGINE or "").strip().lower() in ("elevenlabs", "eleven_labs", "eleven")
+            else config.EDGE_TTS_VOICE
             if (config.TTS_ENGINE or "").strip().lower() == "edge"
             else config.QWEN_TTS_VOICE
         ),
@@ -128,4 +130,6 @@ async def speak(request: Request) -> Response:
         raise HTTPException(500, f"tts failed: {e}") from e
     except Exception as e:  # noqa: BLE001
         raise HTTPException(500, f"tts failed: {type(e).__name__}: {e}") from e
-    return Response(content=wav_bytes, media_type="audio/wav")
+    is_mp3 = (config.TTS_ENGINE or "").strip().lower() in ("elevenlabs", "eleven_labs", "eleven")
+    media_type = "audio/mpeg" if is_mp3 else "audio/wav"
+    return Response(content=wav_bytes, media_type=media_type)

@@ -13,12 +13,11 @@ import { ReviewCard } from "@/components/ReviewCard";
 import { HistoryList } from "@/components/HistoryList";
 import { PendingRequests } from "@/components/PendingRequests";
 import { VoiceButton } from "@/components/VoiceButton";
-import { VoiceOrb } from "@/components/VoiceOrb";
 import { ChatBar } from "@/components/ChatBar";
 import { SplitForm } from "@/components/SplitForm";
 import { SavingsGoals } from "@/components/SavingsGoals";
 import { AnimatePresence, motion } from "framer-motion";
-import { HandCoins, LogOut, Scan, ShieldCheck, Settings as SettingsIcon } from "lucide-react";
+import { HandCoins, LogOut, Settings as SettingsIcon } from "lucide-react";
 import { speakText, subscribeSpeaking } from "@/lib/speech";
 import { useVoiceLoop } from "@/hooks/useVoiceLoop";
 
@@ -227,14 +226,7 @@ export default function DashboardPage() {
 
   async function handleConfirm() {
     if (!reviewResp || !reviewResp.pending_id || !activeId) return;
-    // If this user has enrolled a face, gate the confirm on a successful
-    // Face ID match. If not enrolled, fall through to the regular
-    // confirm — the demo is intentionally non-blocking.
-    if (faceStatus?.enrolled) {
-      setFaceConfirmOpen(true);
-      return;
-    }
-    await confirmAfterFaceID();
+    setFaceConfirmOpen(true);
   }
 
   async function confirmAfterFaceID() {
@@ -464,32 +456,6 @@ export default function DashboardPage() {
             <HandCoins size={17} strokeWidth={1.8} />
             <span>Request money</span>
           </button>
-          {faceStatus ? (
-            <button
-              type="button"
-              onClick={() => setSettingsOpen(true)}
-              title={
-                faceStatus.enrolled
-                  ? "Face ID enrolled — click to manage"
-                  : "Face ID not enrolled — click to set up"
-              }
-              className={
-                "btn-ghost rounded-full w-10 h-10 flex items-center justify-center text-sm " +
-                (faceStatus.enrolled ? "ring-1 ring-mint-400/40" : "")
-              }
-              data-testid="face-id-indicator"
-            >
-              {faceStatus.enrolled ? (
-                <ShieldCheck
-                  size={17}
-                  strokeWidth={1.8}
-                  className="text-mint-400"
-                />
-              ) : (
-                <Scan size={17} strokeWidth={1.8} className="text-cream/60" />
-              )}
-            </button>
-          ) : null}
           <button
             type="button"
             onClick={() => setSettingsOpen(true)}
@@ -627,9 +593,6 @@ export default function DashboardPage() {
         </div>
       </motion.div>
 
-      {/* Voice orb — always-on voice indicator (floating bottom-center) */}
-      <VoiceOrb />
-
       {/* Face ID confirm overlay — gates the actual /agent/confirm call
           on a successful face match. Only opens when the user has an
           active enrollment; un-enrolled users fall through to the
@@ -658,8 +621,14 @@ export default function DashboardPage() {
       {/* Settings modal */}
       <SettingsModal
         open={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
+        onClose={() => {
+          setSettingsOpen(false);
+          if (activeId !== null) {
+            api.getFaceStatus(activeId).then(setFaceStatus).catch(() => {});
+          }
+        }}
         userId={activeId}
+        onFaceStatusChange={setFaceStatus}
       />
 
       {/* Ask-for-money modal */}

@@ -23,6 +23,8 @@ type Settings = {
   tts_engine: string;
   edge_tts_voice: string;
   qwen_tts_voice: string;
+  elevenlabs_voice_id?: string;
+  elevenlabs_configured?: boolean;
   stt_model: string;
   pending_ttl_seconds: number;
 };
@@ -40,10 +42,12 @@ export function SettingsModal({
   open,
   onClose,
   userId,
+  onFaceStatusChange,
 }: {
   open: boolean;
   onClose: () => void;
   userId: number | null;
+  onFaceStatusChange?: (status: FaceStatus | null) => void;
 }) {
   const [s, setS] = useState<Settings | null>(null);
   const [h, setH] = useState<Health | null>(null);
@@ -59,9 +63,11 @@ export function SettingsModal({
   const [orUrl, setOrUrl] = useState("");
   const [orModels, setOrModels] = useState("");
   const [orKey, setOrKey] = useState("");
-  const [ttsEngine, setTtsEngine] = useState("qwen");
+  const [ttsEngine, setTtsEngine] = useState("elevenlabs");
   const [edgeVoice, setEdgeVoice] = useState("");
   const [qwenVoice, setQwenVoice] = useState("");
+  const [elevenVoice, setElevenVoice] = useState("21m00Tcm4TlvDq8ikWAM");
+  const [elevenKey, setElevenKey] = useState("");
   const [sttModel, setSttModel] = useState("base");
 
   useEffect(() => {
@@ -85,6 +91,8 @@ export function SettingsModal({
         setTtsEngine(st.tts_engine);
         setEdgeVoice(st.edge_tts_voice);
         setQwenVoice(st.qwen_tts_voice);
+        setElevenVoice(st.elevenlabs_voice_id || "21m00Tcm4TlvDq8ikWAM");
+        setElevenKey("");
         setSttModel(st.stt_model);
       })
       .catch((e) => setErr(`Load failed: ${(e as Error).message}`));
@@ -103,9 +111,11 @@ export function SettingsModal({
         tts_engine: ttsEngine,
         edge_tts_voice: edgeVoice,
         qwen_tts_voice: qwenVoice,
+        elevenlabs_voice_id: elevenVoice,
         stt_model: sttModel,
       };
       if (orKey.trim()) patch["openrouter_api_key"] = orKey.trim();
+      if (elevenKey.trim()) patch["elevenlabs_api_key"] = elevenKey.trim();
       const next = await api.patchSettings(patch);
       setS(next as Settings);
       const health = await api.getHealth();
@@ -221,20 +231,43 @@ export function SettingsModal({
               label="TTS engine"
               value={ttsEngine}
               onChange={setTtsEngine}
-              options={["qwen", "edge"]}
+              options={["elevenlabs", "edge", "qwen"]}
             />
-            <Field
-              label="Edge TTS voice"
-              value={edgeVoice}
-              onChange={setEdgeVoice}
-              placeholder="en-US-GuyNeural"
-            />
-            <Field
-              label="Qwen3 TTS voice"
-              value={qwenVoice}
-              onChange={setQwenVoice}
-              placeholder="Ryan"
-            />
+            {ttsEngine === "elevenlabs" ? (
+              <>
+                <Field
+                  label="ElevenLabs Voice ID"
+                  value={elevenVoice}
+                  onChange={setElevenVoice}
+                  placeholder="21m00Tcm4TlvDq8ikWAM (Rachel)"
+                />
+                <Field
+                  label="ElevenLabs API key"
+                  value={elevenKey}
+                  onChange={setElevenKey}
+                  placeholder={
+                    s?.elevenlabs_configured ? "(key set — leave blank to keep)" : "xi-api-key…"
+                  }
+                  type="password"
+                />
+              </>
+            ) : null}
+            {ttsEngine === "edge" ? (
+              <Field
+                label="Edge TTS voice"
+                value={edgeVoice}
+                onChange={setEdgeVoice}
+                placeholder="en-US-GuyNeural"
+              />
+            ) : null}
+            {ttsEngine === "qwen" ? (
+              <Field
+                label="Qwen3 TTS voice"
+                value={qwenVoice}
+                onChange={setQwenVoice}
+                placeholder="Ryan"
+              />
+            ) : null}
             <Field
               label="Whisper model"
               value={sttModel}
@@ -327,16 +360,21 @@ export function SettingsModal({
                       // Refresh status so the section header updates.
                       api
                         .getFaceStatus(userId)
-                        .then(setFaceStatus)
+                        .then((st) => {
+                          setFaceStatus(st);
+                          onFaceStatusChange?.(st);
+                        })
                         .catch(() => {});
                     }}
                     onDeleted={() => {
                       setEnrollOpen(false);
-                      setFaceStatus({
+                      const cleared = {
                         user_id: userId,
                         enrolled: false,
                         enrolled_at: null,
-                      });
+                      };
+                      setFaceStatus(cleared);
+                      onFaceStatusChange?.(cleared);
                     }}
                   />
                 ) : null}

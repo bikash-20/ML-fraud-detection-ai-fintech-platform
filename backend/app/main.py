@@ -195,6 +195,8 @@ def get_settings() -> dict:
         "tts_engine": config.TTS_ENGINE,
         "edge_tts_voice": config.EDGE_TTS_VOICE,
         "qwen_tts_voice": config.QWEN_TTS_VOICE,
+        "elevenlabs_voice_id": config.ELEVENLABS_VOICE_ID,
+        "elevenlabs_configured": bool((config.ELEVENLABS_API_KEY or "").strip()),
         "stt_model": config.STT_MODEL,
         "pending_ttl_seconds": config.PENDING_TTL_SECONDS,
     }
@@ -225,6 +227,10 @@ def patch_settings(payload: dict = Body(...)) -> dict:
         config.EDGE_TTS_VOICE = payload["edge_tts_voice"].strip()
     if "qwen_tts_voice" in payload:
         config.QWEN_TTS_VOICE = payload["qwen_tts_voice"].strip()
+    if "elevenlabs_voice_id" in payload:
+        config.ELEVENLABS_VOICE_ID = payload["elevenlabs_voice_id"].strip()
+    if "elevenlabs_api_key" in payload:
+        config.ELEVENLABS_API_KEY = payload["elevenlabs_api_key"].strip()
     if "stt_model" in payload:
         config.STT_MODEL = payload["stt_model"].strip()
     return get_settings()

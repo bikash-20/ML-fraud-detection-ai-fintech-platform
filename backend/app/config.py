@@ -10,7 +10,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 ROOT = Path(__file__).resolve().parent.parent
-load_dotenv(ROOT / ".env", override=False)
+load_dotenv(ROOT / ".env", override=True)
 
 # ---- App --------------------------------------------------------------------
 APP_HOST = os.getenv("APP_HOST", "127.0.0.1")
@@ -51,6 +51,13 @@ QWEN_TTS_LANG = os.getenv("QWEN_TTS_LANG", "English")
 QWEN_TTS_INSTRUCT = os.getenv(
     "QWEN_TTS_INSTRUCT", "Speak calmly, like a thoughtful assistant."
 )
+
+# ElevenLabs TTS
+ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY", "").strip()
+# Default free premade voice ID: "JBFqnCBsd6RMkjVDRZzb" (George - warm & captivating)
+ELEVENLABS_VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID", "JBFqnCBsd6RMkjVDRZzb").strip()
+ELEVENLABS_MODEL_ID = os.getenv("ELEVENLABS_MODEL_ID", "eleven_multilingual_v2").strip()
+
 VOICE_REPLY_ENABLED = os.getenv("VOICE_REPLY_ENABLED", "true").strip().lower() in {
     "1", "true", "yes", "on"
 }

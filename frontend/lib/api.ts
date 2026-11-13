@@ -7,6 +7,7 @@ export type User = {
   handle: string;
   display_name: string;
   phone: string;
+  email?: string;
 };
 
 export type Txn = {
@@ -141,6 +142,8 @@ async function httpJson<T>(
 }
 
 export const api = {
+  login: (email: string, password?: string) =>
+    httpJson<User>("POST", "/auth/login", { email, password: password || "" }),
   listUsers: () => httpJson<User[]>("GET", "/users"),
   getUser: (id: number) => httpJson<User>("GET", `/users/${id}`),
   getUserByHandle: (handle: string) =>

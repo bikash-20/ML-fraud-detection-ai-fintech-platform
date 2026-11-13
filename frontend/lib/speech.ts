@@ -127,6 +127,7 @@ async function drain(): Promise<void> {
       } catch (e) {
         if (myGen !== currentGeneration) continue; // stale
         const err = e instanceof Error ? e : new Error(String(e));
+        console.warn("[TTS] synthesis failed:", err);
         job.onError?.(err);
       }
     }
@@ -176,8 +177,14 @@ async function playBlob(blob: Blob, job: Job): Promise<void> {
       resolve();
     };
     audio.onended = finish;
-    audio.onerror = () => finish();
-    audio.play().catch(() => finish());
+    audio.onerror = (e) => {
+      console.warn("[TTS] audio element error:", e);
+      finish();
+    };
+    audio.play().catch((err) => {
+      console.warn("[TTS] audio play rejected (autoplay policy?):", err);
+      finish();
+    });
   });
 }
 

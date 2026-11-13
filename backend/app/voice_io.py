@@ -25,6 +25,17 @@ from typing import Optional
 
 from . import config
 
+# Compatibility patch for PyAV >= 14 with faster-whisper
+try:
+    import av
+    _orig_av_open = av.open
+    def _safe_av_open(*args, **kwargs):
+        kwargs.pop("metadata_errors", None)
+        return _orig_av_open(*args, **kwargs)
+    av.open = _safe_av_open
+except Exception:
+    pass
+
 
 # ---- TTS model state --------------------------------------------------------
 _model = None
@@ -114,8 +125,44 @@ def _qwen_synthesize_to_wav(text: str, out_path: str) -> None:
     _save_wav(audio, sr, out_path)
 
 
+def _elevenlabs_synthesize(text: str, out_path: str) -> None:
+    api_key = (config.ELEVENLABS_API_KEY or "").strip()
+    if not api_key:
+        raise RuntimeError(
+            "ELEVENLABS_API_KEY is not set. Add ELEVENLABS_API_KEY=your_key in backend/.env"
+        )
+    voice_id = (config.ELEVENLABS_VOICE_ID or "21m00Tcm4TlvDq8ikWAM").strip()
+    model_id = (config.ELEVENLABS_MODEL_ID or "eleven_multilingual_v2").strip()
+    url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
+
+    payload = {
+        "text": text,
+        "model_id": model_id,
+        "voice_settings": {
+            "stability": 0.5,
+            "similarity_boost": 0.75,
+        },
+    }
+    headers = {
+        "xi-api-key": api_key,
+        "Content-Type": "application/json",
+        "Accept": "audio/mpeg",
+    }
+    import httpx
+    with httpx.Client(timeout=30.0) as client:
+        resp = client.post(url, json=payload, headers=headers)
+        if resp.status_code != 200:
+            err_text = resp.text[:300]
+            raise RuntimeError(f"ElevenLabs TTS API error ({resp.status_code}): {err_text}")
+        with open(out_path, "wb") as f:
+            f.write(resp.content)
+
+
 def _synthesize_to_wav(text: str, out_path: str) -> None:
     engine = (config.TTS_ENGINE or "edge").strip().lower()
+    if engine in ("elevenlabs", "eleven_labs", "eleven"):
+        _elevenlabs_synthesize(text, out_path)
+        return
     if engine == "edge":
         try:
             _edge_synthesize_to_wav(text, out_path)

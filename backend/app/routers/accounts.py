@@ -25,6 +25,7 @@ from ..schemas import (
     FaceEnrollResponse,
     FaceStatusResponse,
     HistoryResponse,
+    LoginRequest,
     PendingRequestOut,
     SavingsContribution,
     SavingsGoalCreate,
@@ -65,7 +66,40 @@ router = APIRouter(tags=["accounts"])
 def list_users() -> list[UserOut]:
     with session_scope() as s:
         rows = s.execute(select(User).order_by(User.id)).scalars().all()
-        return [UserOut(id=u.id, handle=u.handle, display_name=u.display_name, phone=u.phone) for u in rows]
+        return [
+            UserOut(
+                id=u.id,
+                handle=u.handle,
+                display_name=u.display_name,
+                phone=u.phone,
+                email=f"{u.handle}@wallet.com",
+            )
+            for u in rows
+        ]
+
+
+@router.post("/auth/login", response_model=UserOut)
+def login(body: LoginRequest) -> UserOut:
+    raw = (body.email or "").strip().lower()
+    if not raw:
+        raise HTTPException(400, "Email or username is required")
+    # If user passed e.g. bikash@wallet.com, candidate handle is bikash
+    candidate_handle = raw.split("@")[0].strip()
+    with session_scope() as s:
+        u = s.query(User).filter(
+            (User.handle == raw) |
+            (User.handle == candidate_handle) |
+            (User.phone == raw)
+        ).first()
+        if u is None:
+            raise HTTPException(401, "No account found matching this email or username.")
+        return UserOut(
+            id=u.id,
+            handle=u.handle,
+            display_name=u.display_name,
+            phone=u.phone,
+            email=f"{u.handle}@wallet.com",
+        )
 
 
 @router.get("/users/{user_id}", response_model=UserOut)
@@ -74,7 +108,13 @@ def get_user(user_id: int) -> UserOut:
         u = s.get(User, user_id)
         if u is None:
             raise HTTPException(404, "user not found")
-        return UserOut(id=u.id, handle=u.handle, display_name=u.display_name, phone=u.phone)
+        return UserOut(
+            id=u.id,
+            handle=u.handle,
+            display_name=u.display_name,
+            phone=u.phone,
+            email=f"{u.handle}@wallet.com",
+        )
 
 
 @router.get("/users/handle/{handle}", response_model=UserOut)
@@ -83,7 +123,13 @@ def get_user_by_handle(handle: str) -> UserOut:
         u = s.query(User).filter_by(handle=handle).one_or_none()
         if u is None:
             raise HTTPException(404, "user not found")
-        return UserOut(id=u.id, handle=u.handle, display_name=u.display_name, phone=u.phone)
+        return UserOut(
+            id=u.id,
+            handle=u.handle,
+            display_name=u.display_name,
+            phone=u.phone,
+            email=f"{u.handle}@wallet.com",
+        )
 
 
 @router.get("/users/{user_id}/balance", response_model=BalanceOut)

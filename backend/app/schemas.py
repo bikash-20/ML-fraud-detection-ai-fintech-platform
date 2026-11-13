@@ -96,11 +96,17 @@ class AgentChatResponse(BaseModel):
 
 
 # ---- Accounts ---------------------------------------------------------------
+class LoginRequest(BaseModel):
+    email: str = Field(..., min_length=1, max_length=120)
+    password: Optional[str] = Field(default="", max_length=120)
+
+
 class UserOut(BaseModel):
     id: int
     handle: str
     display_name: str
     phone: str
+    email: Optional[str] = None
 
 
 class BalanceOut(BaseModel):

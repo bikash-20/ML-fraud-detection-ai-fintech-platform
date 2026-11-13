@@ -8,3 +8,4 @@ faster-whisper>=1.0.0
 edge-tts>=6.1
 mlx-audio>=0.2          # Apple Silicon TTS (Qwen3-TTS)
 pytest>=8.0
+python-multipart>=0.0.9

@@ -279,14 +279,32 @@ export function FaceIDConfirm({
         </div>
 
         <div className="flex gap-2">
-          {phase === "needs-enrollment" && onEnrollInstead ? (
-            <button
-              type="button"
-              onClick={onEnrollInstead}
-              className="btn-peach rounded-lg px-5 py-2 flex-1 text-sm font-semibold"
-            >
-              Enroll my face
-            </button>
+          {phase === "needs-enrollment" ? (
+            <div className="flex gap-2 w-full">
+              {onEnrollInstead ? (
+                <button
+                  type="button"
+                  onClick={onEnrollInstead}
+                  className="btn-peach rounded-lg px-4 py-2 flex-1 text-sm font-semibold"
+                >
+                  Enroll Face ID
+                </button>
+              ) : null}
+              <button
+                type="button"
+                onClick={onMatch}
+                className="btn-ghost rounded-lg px-4 py-2 flex-1 text-sm"
+              >
+                Skip & Confirm
+              </button>
+              <button
+                type="button"
+                onClick={onCancel}
+                className="btn-ghost rounded-lg px-3 py-2 text-sm text-secondary"
+              >
+                Cancel
+              </button>
+            </div>
           ) : phase === "not-matched" || phase === "camera-error" ? (
             <button
               type="button"

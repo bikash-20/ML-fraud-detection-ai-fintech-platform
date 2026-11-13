@@ -11,6 +11,7 @@ export type ChatMessage = {
   role: "user" | "assistant";
   text: string;
   pending?: boolean;
+  typing?: boolean;
 };
 
 let _id = 0;
@@ -38,11 +39,42 @@ export function ChatBar({
   }, []);
 
   useEffect(() => {
-    // Auto-scroll on new message.
+    // Auto-scroll on new message or as text is typed.
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages.length]);
+  }, [messages]);
+
+  async function typewrite(msgId: number, fullText: string) {
+    if (!fullText) {
+      setMessages((m) =>
+        m.map((x) =>
+          x.id === msgId ? { ...x, text: "", pending: false, typing: false } : x
+        )
+      );
+      return;
+    }
+    const step = fullText.length > 200 ? 3 : fullText.length > 80 ? 2 : 1;
+    let current = "";
+    for (let i = 0; i < fullText.length; i += step) {
+      current = fullText.slice(0, i + step);
+      setMessages((m) =>
+        m.map((x) =>
+          x.id === msgId
+            ? { ...x, text: current, pending: false, typing: true }
+            : x
+        )
+      );
+      await new Promise((r) => setTimeout(r, 16));
+    }
+    setMessages((m) =>
+      m.map((x) =>
+        x.id === msgId
+          ? { ...x, text: fullText, pending: false, typing: false }
+          : x
+      )
+    );
+  }
 
   async function sendText(text: string) {
     const trimmed = text.trim();
@@ -70,8 +102,9 @@ export function ChatBar({
 
     if (isCommand) {
       // Defer to the orchestrator and show a thinking reply.
+      const thinkId = nextId();
       const think: ChatMessage = {
-        id: nextId(),
+        id: thinkId,
         role: "assistant",
         text: "…",
         pending: true,
@@ -79,22 +112,12 @@ export function ChatBar({
       setMessages((m) => [...m, think]);
       try {
         const response = await onCommand(trimmed);
-        if (response?.text) speakText(response.text);
-        setMessages((m) =>
-          m.map((x) =>
-            x.id === think.id
-              ? { ...x, text: response?.text || "I couldn't complete that request." }
-              : x
-          )
-        );
+        const replyText = response?.text || "I couldn't complete that request.";
+        speakText(replyText);
+        await typewrite(thinkId, replyText);
       } catch (e) {
-        setMessages((m) =>
-          m.map((x) =>
-            x.id === think.id
-              ? { ...x, text: `Couldn't reach the assistant: ${(e as Error).message}` }
-              : x
-          )
-        );
+        const errMsg = `Couldn't reach the assistant: ${(e as Error).message}`;
+        await typewrite(thinkId, errMsg);
       } finally {
         setBusy(false);
       }
@@ -102,22 +125,21 @@ export function ChatBar({
     }
 
     // Pure chat — use the conversational endpoint.
+    const assistantId = nextId();
+    const think: ChatMessage = {
+      id: assistantId,
+      role: "assistant",
+      text: "…",
+      pending: true,
+    };
+    setMessages((m) => [...m, think]);
     try {
       const r = await api.agentChat({ user_id: userId, text: trimmed });
       speakText(r.text);
-      setMessages((m) => [
-        ...m,
-        { id: nextId(), role: "assistant", text: r.text },
-      ]);
+      await typewrite(assistantId, r.text);
     } catch (e) {
-      setMessages((m) => [
-        ...m,
-        {
-          id: nextId(),
-          role: "assistant",
-          text: `Couldn't reach the assistant: ${(e as Error).message}`,
-        },
-      ]);
+      const errMsg = `Couldn't reach the assistant: ${(e as Error).message}`;
+      await typewrite(assistantId, errMsg);
     } finally {
       setBusy(false);
     }
@@ -165,10 +187,13 @@ export function ChatBar({
             >
               {m.role === "assistant" && !m.pending ? (
                 <span>
-                  <span className="text-peach-500/80 text-xs uppercase tracking-wider mr-2">
+                  <span className="text-peach-500/80 text-xs uppercase tracking-wider mr-2 font-mono">
                     wallet
                   </span>
                   {m.text}
+                  {m.typing && (
+                    <span className="inline-block w-1.5 h-3.5 ml-1 bg-peach-500 animate-pulse align-middle" />
+                  )}
                 </span>
               ) : (
                 m.text
