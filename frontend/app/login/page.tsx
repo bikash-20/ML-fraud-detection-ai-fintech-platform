@@ -72,14 +72,14 @@ export default function LoginPage() {
 
   return (
     <main className="relative min-h-screen w-full flex items-center justify-center p-4 sm:p-6 lg:p-10 overflow-hidden text-cream selection:bg-peach-500/30">
-      {/* Background image: positioned at z-0 so it renders on top of body gradient */}
+      {/* Background image with brightness & contrast boost */}
       <div
-        className="absolute inset-0 w-full h-full bg-cover bg-center lg:bg-right bg-no-repeat z-0 pointer-events-none"
+        className="absolute inset-0 w-full h-full bg-cover bg-center lg:bg-right bg-no-repeat z-0 pointer-events-none brightness-115 contrast-105 saturate-110"
         style={{ backgroundImage: "url('/image/login-bg.jpg')" }}
       />
 
-      {/* Atmospheric gradient overlay: deeper on left for crisp readability, softer on right for 3D bank and phone visibility */}
-      <div className="absolute inset-0 bg-gradient-to-r from-plum-950/95 via-plum-950/75 to-plum-950/35 z-0 pointer-events-none" />
+      {/* Atmospheric gradient overlay: softer wash so the glowing bank and network shine brightly */}
+      <div className="absolute inset-0 bg-gradient-to-r from-plum-950/75 via-plum-950/25 to-transparent z-0 pointer-events-none" />
 
       {/* Content wrapper with z-10 */}
       <div className="relative z-10 w-full max-w-7xl min-h-[82vh] grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-center">
