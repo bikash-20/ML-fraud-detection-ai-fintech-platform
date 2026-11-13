@@ -71,81 +71,81 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="relative min-h-screen w-full flex items-center justify-center p-4 sm:p-8 lg:p-12 overflow-x-hidden text-cream selection:bg-peach-500/30">
-      {/* Background image provided by user: 3D Bank and Global Banking Network */}
+    <main className="relative min-h-screen w-full flex items-center justify-center p-4 sm:p-6 lg:p-10 overflow-hidden text-cream selection:bg-peach-500/30">
+      {/* Background image: positioned at z-0 so it renders on top of body gradient */}
       <div
-        className="fixed inset-0 w-full h-full bg-cover bg-center lg:bg-right bg-no-repeat -z-20 transition-all duration-700"
+        className="absolute inset-0 w-full h-full bg-cover bg-center lg:bg-right bg-no-repeat z-0 pointer-events-none"
         style={{ backgroundImage: "url('/image/login-bg.jpg')" }}
       />
 
-      {/* Atmospheric gradient overlay: deeper on the left for crisp text contrast, transparent on the right to showcase the bank and phone */}
-      <div className="fixed inset-0 bg-gradient-to-r from-plum-950/95 via-plum-950/70 to-transparent -z-10" />
+      {/* Atmospheric gradient overlay: deeper on left for crisp readability, softer on right for 3D bank and phone visibility */}
+      <div className="absolute inset-0 bg-gradient-to-r from-plum-950/95 via-plum-950/75 to-plum-950/35 z-0 pointer-events-none" />
 
-      {/* Full viewport container */}
-      <div className="w-full max-w-7xl min-h-[88vh] grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
-        {/* Left Column: Full-height expansive Login Card */}
+      {/* Content wrapper with z-10 */}
+      <div className="relative z-10 w-full max-w-7xl min-h-[82vh] grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-center">
+        {/* Left Column: Refined Login Card */}
         <div className="lg:col-span-6 xl:col-span-5 w-full flex justify-center lg:justify-start">
-          <div className="w-full max-w-xl glass-strong rounded-3xl p-8 sm:p-10 md:p-12 border border-white/20 shadow-2xl backdrop-blur-2xl">
+          <div className="w-full max-w-md lg:max-w-lg glass-strong rounded-3xl p-6 sm:p-8 border border-white/20 shadow-2xl backdrop-blur-xl">
             {/* Header */}
-            <div className="mb-8">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-peach-500/20 border border-peach-500/40 text-peach-300 text-xs font-semibold mb-3">
-                <Sparkles size={14} className="text-peach-400" />
+            <div className="mb-6">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-peach-500/20 border border-peach-500/40 text-peach-300 text-[11px] font-semibold mb-2.5">
+                <Sparkles size={13} className="text-peach-400" />
                 <span>AI-First BDT Ledger</span>
               </div>
 
-              <h2 className="text-4xl sm:text-5xl font-black text-white tracking-tight">
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
                 Sign In<span className="text-peach-500">.</span>
               </h2>
-              <p className="text-base sm:text-lg text-lavender mt-2">
+              <p className="text-xs sm:text-sm text-lavender mt-1">
                 Enter your credentials to manage your balance, bills, and transfers.
               </p>
             </div>
 
             {error && (
-              <div className="mb-6 p-4 rounded-2xl bg-red-500/20 border border-red-500/40 text-red-200 text-sm flex items-center gap-3 animate-in fade-in">
-                <span className="w-2 h-2 rounded-full bg-red-400 shrink-0" />
+              <div className="mb-4 p-3 rounded-xl bg-red-500/20 border border-red-500/40 text-red-200 text-xs flex items-center gap-2.5 animate-in fade-in">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
                 <span className="flex-1 font-medium">{error}</span>
               </div>
             )}
 
             {/* Login Form */}
-            <form onSubmit={handleFormLogin} className="space-y-6">
+            <form onSubmit={handleFormLogin} className="space-y-4">
               {/* Quick autofill suggestion chips */}
-              <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs text-secondary">
-                <span className="shrink-0 text-peach-400 font-semibold flex items-center gap-1 text-sm">
-                  <Zap size={14} /> Fill:
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 text-xs text-secondary">
+                <span className="shrink-0 text-peach-400 font-semibold flex items-center gap-1 text-xs">
+                  <Zap size={12} /> Fill:
                 </span>
                 <button
                   type="button"
                   onClick={() => autofill("bikash")}
-                  className="px-3 py-1.5 rounded-full bg-white/10 hover:bg-peach-500/25 border border-white/15 hover:border-peach-500/50 text-cream text-xs font-semibold transition-all shrink-0"
+                  className="px-2.5 py-1 rounded-full bg-white/10 hover:bg-peach-500/25 border border-white/15 hover:border-peach-500/50 text-cream text-[11px] font-medium transition-all shrink-0"
                 >
                   bikash (Boss)
                 </button>
                 <button
                   type="button"
                   onClick={() => autofill("rishad")}
-                  className="px-3 py-1.5 rounded-full bg-white/10 hover:bg-peach-500/25 border border-white/15 hover:border-peach-500/50 text-cream text-xs font-semibold transition-all shrink-0"
+                  className="px-2.5 py-1 rounded-full bg-white/10 hover:bg-peach-500/25 border border-white/15 hover:border-peach-500/50 text-cream text-[11px] font-medium transition-all shrink-0"
                 >
                   rishad
                 </button>
                 <button
                   type="button"
                   onClick={() => autofill("arman")}
-                  className="px-3 py-1.5 rounded-full bg-white/10 hover:bg-peach-500/25 border border-white/15 hover:border-peach-500/50 text-cream text-xs font-semibold transition-all shrink-0"
+                  className="px-2.5 py-1 rounded-full bg-white/10 hover:bg-peach-500/25 border border-white/15 hover:border-peach-500/50 text-cream text-[11px] font-medium transition-all shrink-0"
                 >
                   arman
                 </button>
               </div>
 
               {/* Email / Username */}
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-cream block tracking-wide">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-cream block tracking-wide">
                   Email or Username
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-lavender">
-                    <Mail size={20} />
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-lavender">
+                    <Mail size={16} />
                   </div>
                   <input
                     type="text"
@@ -154,28 +154,28 @@ export default function LoginPage() {
                     placeholder="bikash@wallet.com or bikash"
                     required
                     disabled={submitting}
-                    className="w-full bg-white/10 border border-white/20 rounded-2xl pl-12 pr-4 py-3.5 text-base sm:text-lg text-cream placeholder:text-secondary focus:outline-none focus:border-peach-500 focus:ring-2 focus:ring-peach-500/30 transition-all shadow-inner"
+                    className="w-full bg-white/10 border border-white/20 rounded-xl pl-10 pr-4 py-2.5 text-sm text-cream placeholder:text-secondary focus:outline-none focus:border-peach-500 focus:ring-1 focus:ring-peach-500/30 transition-all shadow-inner"
                   />
                 </div>
               </div>
 
               {/* Password */}
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <label className="text-sm font-semibold text-cream block tracking-wide">
+                  <label className="text-xs font-semibold text-cream block tracking-wide">
                     Password
                   </label>
                   <button
                     type="button"
                     onClick={() => setError("Demo password: enter any text or 'wallet2026'")}
-                    className="text-xs sm:text-sm text-peach-400 hover:text-peach-300 transition-colors font-medium"
+                    className="text-[11px] text-peach-400 hover:text-peach-300 transition-colors font-medium"
                   >
                     Forgot password?
                   </button>
                 </div>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-lavender">
-                    <Lock size={20} />
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-lavender">
+                    <Lock size={16} />
                   </div>
                   <input
                     type={showPassword ? "text" : "password"}
@@ -184,32 +184,32 @@ export default function LoginPage() {
                     placeholder="••••••••"
                     required
                     disabled={submitting}
-                    className="w-full bg-white/10 border border-white/20 rounded-2xl pl-12 pr-12 py-3.5 text-base sm:text-lg text-cream placeholder:text-secondary focus:outline-none focus:border-peach-500 focus:ring-2 focus:ring-peach-500/30 transition-all font-mono shadow-inner"
+                    className="w-full bg-white/10 border border-white/20 rounded-xl pl-10 pr-10 py-2.5 text-sm text-cream placeholder:text-secondary focus:outline-none focus:border-peach-500 focus:ring-1 focus:ring-peach-500/30 transition-all font-mono shadow-inner"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-4 flex items-center text-lavender hover:text-cream transition-colors"
+                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-lavender hover:text-cream transition-colors"
                     title={showPassword ? "Hide password" : "Show password"}
                   >
-                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
               </div>
 
               {/* Options Row */}
-              <div className="flex items-center justify-between text-sm pt-1">
-                <label className="flex items-center gap-2.5 cursor-pointer text-lavender hover:text-cream select-none">
+              <div className="flex items-center justify-between text-xs pt-0.5">
+                <label className="flex items-center gap-2 cursor-pointer text-lavender hover:text-cream select-none">
                   <input
                     type="checkbox"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
-                    className="w-4 h-4 rounded border-white/20 bg-white/10 text-peach-500 focus:ring-0 focus:ring-offset-0"
+                    className="w-3.5 h-3.5 rounded border-white/20 bg-white/10 text-peach-500 focus:ring-0 focus:ring-offset-0"
                   />
-                  <span className="font-medium">Remember this device</span>
+                  <span className="font-medium text-xs">Remember this device</span>
                 </label>
-                <span className="text-xs text-lavender flex items-center gap-1.5 font-medium">
-                  <ShieldCheck size={15} className="text-peach-400" /> Face ID ready
+                <span className="text-[11px] text-lavender flex items-center gap-1 font-medium">
+                  <ShieldCheck size={13} className="text-peach-400" /> Face ID ready
                 </span>
               </div>
 
@@ -217,25 +217,25 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={submitting || !email.trim()}
-                className="w-full btn-peach rounded-2xl py-4 text-base sm:text-lg font-bold flex items-center justify-center gap-3 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-xl shadow-peach-500/25 active:scale-[0.99]"
+                className="w-full btn-peach rounded-xl py-3 text-sm font-bold flex items-center justify-center gap-2.5 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-lg shadow-peach-500/20 active:scale-[0.99]"
               >
                 {submitting ? (
                   <>
-                    <span className="w-5 h-5 border-2 border-plum-950 border-t-transparent rounded-full animate-spin" />
+                    <span className="w-4 h-4 border-2 border-plum-950 border-t-transparent rounded-full animate-spin" />
                     <span>Authenticating…</span>
                   </>
                 ) : (
                   <>
                     <span>Sign In to Account</span>
-                    <ArrowRight size={20} />
+                    <ArrowRight size={16} />
                   </>
                 )}
               </button>
 
               {/* Divider */}
-              <div className="relative my-6 flex items-center justify-center">
+              <div className="relative my-4 flex items-center justify-center">
                 <div className="border-t border-white/15 w-full" />
-                <span className="bg-plum-950/80 px-4 text-xs font-semibold text-secondary uppercase tracking-wider shrink-0">
+                <span className="bg-plum-950/80 px-3 text-[11px] font-semibold text-secondary uppercase tracking-wider shrink-0">
                   or continue with
                 </span>
                 <div className="border-t border-white/15 w-full" />
@@ -246,9 +246,9 @@ export default function LoginPage() {
                 type="button"
                 onClick={handleGoogleLogin}
                 disabled={submitting}
-                className="w-full bg-white/10 hover:bg-white/15 border border-white/20 rounded-2xl py-3.5 px-4 text-sm sm:text-base font-semibold flex items-center justify-center gap-3 transition-all hover:border-white/30 active:scale-[0.99]"
+                className="w-full bg-white/10 hover:bg-white/15 border border-white/20 rounded-xl py-2.5 px-3.5 text-xs font-semibold flex items-center justify-center gap-2.5 transition-all hover:border-white/30 active:scale-[0.99]"
               >
-                <svg className="w-5 h-5" viewBox="0 0 24 24">
+                <svg className="w-4 h-4" viewBox="0 0 24 24">
                   <path
                     fill="#4285F4"
                     d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -272,15 +272,15 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Right Column: Hero showcase over the glowing bank and global network */}
-        <div className="hidden lg:flex lg:col-span-6 xl:col-span-7 flex-col justify-between py-6 pl-8 space-y-10">
-          <div className="space-y-6">
-            <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-peach-500/20 border border-peach-500/35 text-peach-300 text-sm font-semibold tracking-wide backdrop-blur-md">
-              <Sparkles size={16} className="text-peach-400" />
+        {/* Right Column: Hero showcase with scaled down, elegant font sizes */}
+        <div className="hidden lg:flex lg:col-span-6 xl:col-span-7 flex-col justify-between py-4 pl-6 space-y-8">
+          <div className="space-y-4">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-peach-500/20 border border-peach-500/35 text-peach-300 text-xs font-semibold tracking-wide backdrop-blur-md">
+              <Sparkles size={14} className="text-peach-400" />
               <span>Autonomous Global Financial Ledger</span>
             </div>
 
-            <h1 className="text-6xl xl:text-7xl font-extrabold tracking-tight leading-[1.08] text-white drop-shadow-lg">
+            <h1 className="text-4xl xl:text-5xl font-black tracking-tight leading-[1.12] text-white drop-shadow-md">
               Next-Gen <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-peach-300 via-peach-400 to-peach-200">
                 AI Banking
@@ -288,38 +288,38 @@ export default function LoginPage() {
               Platform<span className="text-peach-500">.</span>
             </h1>
 
-            <p className="text-lg xl:text-xl text-white/85 max-w-xl font-normal leading-relaxed drop-shadow">
+            <p className="text-sm xl:text-base text-white/85 max-w-lg font-normal leading-relaxed drop-shadow">
               Experience real-time double-entry BDT accounting, biometric Face ID authorization,
               and low-latency ElevenLabs conversational voice assistants.
             </p>
           </div>
 
-          {/* Feature Badges with enhanced contrast */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg pt-4">
-            <div className="glass-strong rounded-2xl p-4 flex items-start gap-3.5 border border-white/20">
-              <div className="w-10 h-10 rounded-xl bg-peach-500/25 text-peach-300 flex items-center justify-center shrink-0">
-                <ShieldCheck size={22} />
+          {/* Feature Badges with clean, compact sizing */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 max-w-md pt-2">
+            <div className="glass-strong rounded-2xl p-3.5 flex items-start gap-3 border border-white/20">
+              <div className="w-8 h-8 rounded-lg bg-peach-500/25 text-peach-300 flex items-center justify-center shrink-0">
+                <ShieldCheck size={18} />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-white">Biometric Face ID</h3>
-                <p className="text-xs text-lavender mt-0.5">Real-time browser-verified facial recognition.</p>
+                <h3 className="text-xs sm:text-sm font-bold text-white">Biometric Face ID</h3>
+                <p className="text-[11px] text-lavender mt-0.5">Real-time browser-verified facial recognition.</p>
               </div>
             </div>
 
-            <div className="glass-strong rounded-2xl p-4 flex items-start gap-3.5 border border-white/20">
-              <div className="w-10 h-10 rounded-xl bg-peach-500/25 text-peach-300 flex items-center justify-center shrink-0">
-                <Zap size={22} />
+            <div className="glass-strong rounded-2xl p-3.5 flex items-start gap-3 border border-white/20">
+              <div className="w-8 h-8 rounded-lg bg-peach-500/25 text-peach-300 flex items-center justify-center shrink-0">
+                <Zap size={18} />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-white">ElevenLabs Voice</h3>
-                <p className="text-xs text-lavender mt-0.5">Instant TTS voice synthesis and STT commands.</p>
+                <h3 className="text-xs sm:text-sm font-bold text-white">ElevenLabs Voice</h3>
+                <p className="text-[11px] text-lavender mt-0.5">Instant TTS voice synthesis and STT commands.</p>
               </div>
             </div>
           </div>
 
           {/* System status pill */}
-          <div className="flex items-center gap-2.5 text-xs text-white/90 font-mono drop-shadow">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400/80 animate-pulse" />
+          <div className="flex items-center gap-2 text-xs text-white/90 font-mono drop-shadow">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400/80 animate-pulse" />
             <span>Node Core Online • Local Server 127.0.0.1:8000</span>
           </div>
         </div>
