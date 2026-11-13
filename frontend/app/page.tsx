@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { AgentActResponse, FaceStatus, HistoryResponse, PendingRequest, User, api } from "@/lib/api";
 import { newIdempotencyKey } from "@/lib/idempotency";
 import { clearActiveUserId, readActiveUserId, writeActiveUserId } from "@/lib/session";
-import { SessionSwitcher } from "@/components/SessionSwitcher";
 import { BalanceCard } from "@/components/BalanceCard";
 import { SendForm } from "@/components/SendForm";
 import { ReviewCard } from "@/components/ReviewCard";
@@ -445,7 +444,13 @@ export default function DashboardPage() {
             Digital AI money movement platform
           </p>
         </div>
-        <SessionSwitcher users={users} currentId={activeId} onChange={setActiveId} />
+        {activeUser && (
+          <div className="flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400/50" />
+            <span className="font-semibold text-cream">{activeUser.display_name}</span>
+            <span className="text-secondary text-[11px] font-mono">@{activeUser.handle}</span>
+          </div>
+        )}
         <div className="flex items-center gap-2">
           <button
             type="button"
