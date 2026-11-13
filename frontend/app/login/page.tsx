@@ -78,14 +78,14 @@ export default function LoginPage() {
         style={{ backgroundImage: "url('/image/login-bg.jpg')" }}
       />
 
-      {/* Atmospheric gradient overlay: very subtle so the background image is clearly visible through the glass */}
-      <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-black/20 to-transparent z-0 pointer-events-none" />
+      {/* Minimal transparent overlay: ensures full exposure and maximum clarity of the background artwork */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent z-0 pointer-events-none" />
 
       {/* Content wrapper with z-10 */}
       <div className="relative z-10 w-full max-w-7xl min-h-[82vh] grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-center">
-        {/* Left Column: Clear Glassmorphism Login Card */}
+        {/* Left Column: Ultra-Clear Glassmorphism Login Card */}
         <div className="lg:col-span-6 xl:col-span-5 w-full flex justify-center lg:justify-start">
-          <div className="w-full max-w-md lg:max-w-lg bg-white/[0.07] backdrop-blur-md rounded-3xl p-6 sm:p-8 border border-white/25 shadow-[0_8px_32px_0_rgba(0,0,0,0.4)]">
+          <div className="w-full max-w-md lg:max-w-lg bg-white/[0.03] backdrop-blur-[2px] rounded-3xl p-6 sm:p-8 border border-white/30 shadow-[0_8px_32px_0_rgba(0,0,0,0.3)]">
             {/* Header */}
             <div className="mb-6">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-peach-500/20 border border-peach-500/40 text-peach-300 text-[11px] font-semibold mb-2.5">
@@ -294,9 +294,9 @@ export default function LoginPage() {
             </p>
           </div>
 
-          {/* Feature Badges with clear glassmorphism */}
+          {/* Feature Badges with ultra-clear glassmorphism */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 max-w-md pt-2">
-            <div className="bg-white/[0.07] backdrop-blur-md rounded-2xl p-3.5 flex items-start gap-3 border border-white/20">
+            <div className="bg-white/[0.03] backdrop-blur-[2px] rounded-2xl p-3.5 flex items-start gap-3 border border-white/25">
               <div className="w-8 h-8 rounded-lg bg-peach-500/25 text-peach-300 flex items-center justify-center shrink-0">
                 <ShieldCheck size={18} />
               </div>
@@ -306,7 +306,7 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <div className="bg-white/[0.07] backdrop-blur-md rounded-2xl p-3.5 flex items-start gap-3 border border-white/20">
+            <div className="bg-white/[0.03] backdrop-blur-[2px] rounded-2xl p-3.5 flex items-start gap-3 border border-white/25">
               <div className="w-8 h-8 rounded-lg bg-peach-500/25 text-peach-300 flex items-center justify-center shrink-0">
                 <Zap size={18} />
               </div>
