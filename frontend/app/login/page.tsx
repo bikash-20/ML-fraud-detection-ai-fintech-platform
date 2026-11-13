@@ -272,10 +272,10 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Right Column: Hero showcase with scaled down, elegant font sizes */}
-        <div className="hidden lg:flex lg:col-span-6 xl:col-span-7 flex-col justify-between py-4 pl-6 space-y-8">
+        {/* Right Column: Hero showcase shifted up into the map sky area */}
+        <div className="hidden lg:flex lg:col-span-6 xl:col-span-7 flex-col justify-start -mt-8 lg:-mt-14 xl:-mt-18 py-4 pl-6 space-y-6">
           <div className="space-y-4">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-peach-500/20 border border-peach-500/35 text-peach-300 text-xs font-semibold tracking-wide backdrop-blur-md">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-peach-500/20 border border-peach-500/35 text-peach-300 text-xs font-semibold tracking-wide backdrop-blur-md">
               <Sparkles size={14} className="text-peach-400" />
               <span>Autonomous Global Financial Ledger</span>
             </div>
@@ -288,7 +288,7 @@ export default function LoginPage() {
               Platform<span className="text-peach-500">.</span>
             </h1>
 
-            <p className="text-sm xl:text-base text-white/85 max-w-lg font-normal leading-relaxed drop-shadow">
+            <p className="text-base sm:text-lg xl:text-xl font-medium text-white/95 max-w-xl leading-relaxed drop-shadow-lg">
               Experience real-time double-entry BDT accounting, biometric Face ID authorization,
               and low-latency ElevenLabs conversational voice assistants.
             </p>
