@@ -6,7 +6,6 @@ import { User, api } from "@/lib/api";
 import { writeActiveUserId } from "@/lib/session";
 import {
   ArrowRight,
-  CheckCircle2,
   Eye,
   EyeOff,
   Lock,
@@ -73,76 +72,24 @@ export default function LoginPage() {
 
   return (
     <main className="relative min-h-screen w-full flex items-center justify-center p-4 sm:p-8 lg:p-12 overflow-x-hidden text-cream selection:bg-peach-500/30">
-      {/* Background image: Neon Blue Global Banking Network */}
+      {/* Background image provided by user: 3D Bank and Global Banking Network */}
       <div
-        className="fixed inset-0 w-full h-full bg-cover bg-center bg-no-repeat -z-20 transform scale-105 transition-transform duration-1000"
-        style={{ backgroundImage: "url('/image/bg.png')" }}
+        className="fixed inset-0 w-full h-full bg-cover bg-center lg:bg-right bg-no-repeat -z-20 transition-all duration-700"
+        style={{ backgroundImage: "url('/image/login-bg.jpg')" }}
       />
 
-      {/* Dark overlay with plum gradient tint for high contrast & elegance */}
-      <div className="fixed inset-0 bg-gradient-to-tr from-plum-950/95 via-plum-950/85 to-plum-950/60 backdrop-blur-[2px] -z-10" />
+      {/* Atmospheric gradient overlay: deeper on the left for crisp text contrast, transparent on the right to showcase the bank and phone */}
+      <div className="fixed inset-0 bg-gradient-to-r from-plum-950/95 via-plum-950/70 to-transparent -z-10" />
 
-      {/* Full viewport container: 2-column layout on large screens */}
-      <div className="w-full max-w-7xl min-h-[85vh] grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
-        {/* Left Column: Brand showcase / Value proposition */}
-        <div className="hidden lg:flex lg:col-span-6 xl:col-span-7 flex-col justify-between py-6 pr-6 space-y-10">
-          <div className="space-y-6">
-            <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-peach-500/15 border border-peach-500/30 text-peach-300 text-sm font-semibold tracking-wide backdrop-blur-md">
-              <Sparkles size={16} className="text-peach-400" />
-              <span>Autonomous Global Financial Ledger</span>
-            </div>
-
-            <h1 className="text-6xl xl:text-7xl font-extrabold tracking-tight leading-[1.08] text-white">
-              Next-Gen <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-peach-400 via-peach-500 to-peach-300">
-                AI Banking
-              </span>{" "}
-              Platform<span className="text-peach-500">.</span>
-            </h1>
-
-            <p className="text-lg xl:text-xl text-lavender max-w-xl font-normal leading-relaxed">
-              Experience real-time double-entry BDT accounting, biometric Face ID authorization,
-              and low-latency ElevenLabs conversational voice assistants.
-            </p>
-          </div>
-
-          {/* Feature Badges */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg pt-4">
-            <div className="glass rounded-2xl p-4 flex items-start gap-3.5 border border-white/10">
-              <div className="w-10 h-10 rounded-xl bg-peach-500/20 text-peach-400 flex items-center justify-center shrink-0">
-                <ShieldCheck size={22} />
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-cream">Biometric Face ID</h3>
-                <p className="text-xs text-lavender mt-0.5">Real-time browser-verified facial recognition.</p>
-              </div>
-            </div>
-
-            <div className="glass rounded-2xl p-4 flex items-start gap-3.5 border border-white/10">
-              <div className="w-10 h-10 rounded-xl bg-peach-500/20 text-peach-400 flex items-center justify-center shrink-0">
-                <Zap size={22} />
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-cream">ElevenLabs Voice</h3>
-                <p className="text-xs text-lavender mt-0.5">Instant TTS voice synthesis and STT commands.</p>
-              </div>
-            </div>
-          </div>
-
-          {/* System status pill */}
-          <div className="flex items-center gap-2.5 text-xs text-lavender font-mono">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400/80 animate-pulse" />
-            <span>Node Core Online • Local Server 127.0.0.1:8000</span>
-          </div>
-        </div>
-
-        {/* Right Column: Full-height expansive Login Card */}
-        <div className="lg:col-span-6 xl:col-span-5 w-full flex justify-center">
-          <div className="w-full max-w-xl glass-strong rounded-3xl p-8 sm:p-10 md:p-12 border border-white/15 shadow-2xl backdrop-blur-2xl">
+      {/* Full viewport container */}
+      <div className="w-full max-w-7xl min-h-[88vh] grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+        {/* Left Column: Full-height expansive Login Card */}
+        <div className="lg:col-span-6 xl:col-span-5 w-full flex justify-center lg:justify-start">
+          <div className="w-full max-w-xl glass-strong rounded-3xl p-8 sm:p-10 md:p-12 border border-white/20 shadow-2xl backdrop-blur-2xl">
             {/* Header */}
             <div className="mb-8">
-              <div className="lg:hidden inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-peach-500/15 border border-peach-500/30 text-peach-300 text-xs font-semibold mb-3">
-                <Sparkles size={13} className="text-peach-400" />
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-peach-500/20 border border-peach-500/40 text-peach-300 text-xs font-semibold mb-3">
+                <Sparkles size={14} className="text-peach-400" />
                 <span>AI-First BDT Ledger</span>
               </div>
 
@@ -171,21 +118,21 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => autofill("bikash")}
-                  className="px-3 py-1.5 rounded-full bg-white/5 hover:bg-peach-500/20 border border-white/10 hover:border-peach-500/40 text-cream text-xs font-medium transition-all shrink-0"
+                  className="px-3 py-1.5 rounded-full bg-white/10 hover:bg-peach-500/25 border border-white/15 hover:border-peach-500/50 text-cream text-xs font-semibold transition-all shrink-0"
                 >
                   bikash (Boss)
                 </button>
                 <button
                   type="button"
                   onClick={() => autofill("rishad")}
-                  className="px-3 py-1.5 rounded-full bg-white/5 hover:bg-peach-500/20 border border-white/10 hover:border-peach-500/40 text-cream text-xs font-medium transition-all shrink-0"
+                  className="px-3 py-1.5 rounded-full bg-white/10 hover:bg-peach-500/25 border border-white/15 hover:border-peach-500/50 text-cream text-xs font-semibold transition-all shrink-0"
                 >
                   rishad
                 </button>
                 <button
                   type="button"
                   onClick={() => autofill("arman")}
-                  className="px-3 py-1.5 rounded-full bg-white/5 hover:bg-peach-500/20 border border-white/10 hover:border-peach-500/40 text-cream text-xs font-medium transition-all shrink-0"
+                  className="px-3 py-1.5 rounded-full bg-white/10 hover:bg-peach-500/25 border border-white/15 hover:border-peach-500/50 text-cream text-xs font-semibold transition-all shrink-0"
                 >
                   arman
                 </button>
@@ -207,7 +154,7 @@ export default function LoginPage() {
                     placeholder="bikash@wallet.com or bikash"
                     required
                     disabled={submitting}
-                    className="w-full bg-white/5 border border-white/15 rounded-2xl pl-12 pr-4 py-3.5 text-base sm:text-lg text-cream placeholder:text-secondary focus:outline-none focus:border-peach-500 focus:ring-2 focus:ring-peach-500/30 transition-all shadow-inner"
+                    className="w-full bg-white/10 border border-white/20 rounded-2xl pl-12 pr-4 py-3.5 text-base sm:text-lg text-cream placeholder:text-secondary focus:outline-none focus:border-peach-500 focus:ring-2 focus:ring-peach-500/30 transition-all shadow-inner"
                   />
                 </div>
               </div>
@@ -237,7 +184,7 @@ export default function LoginPage() {
                     placeholder="••••••••"
                     required
                     disabled={submitting}
-                    className="w-full bg-white/5 border border-white/15 rounded-2xl pl-12 pr-12 py-3.5 text-base sm:text-lg text-cream placeholder:text-secondary focus:outline-none focus:border-peach-500 focus:ring-2 focus:ring-peach-500/30 transition-all font-mono shadow-inner"
+                    className="w-full bg-white/10 border border-white/20 rounded-2xl pl-12 pr-12 py-3.5 text-base sm:text-lg text-cream placeholder:text-secondary focus:outline-none focus:border-peach-500 focus:ring-2 focus:ring-peach-500/30 transition-all font-mono shadow-inner"
                   />
                   <button
                     type="button"
@@ -257,7 +204,7 @@ export default function LoginPage() {
                     type="checkbox"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
-                    className="w-4 h-4 rounded border-white/20 bg-white/5 text-peach-500 focus:ring-0 focus:ring-offset-0"
+                    className="w-4 h-4 rounded border-white/20 bg-white/10 text-peach-500 focus:ring-0 focus:ring-offset-0"
                   />
                   <span className="font-medium">Remember this device</span>
                 </label>
@@ -287,11 +234,11 @@ export default function LoginPage() {
 
               {/* Divider */}
               <div className="relative my-6 flex items-center justify-center">
-                <div className="border-t border-white/10 w-full" />
+                <div className="border-t border-white/15 w-full" />
                 <span className="bg-plum-950/80 px-4 text-xs font-semibold text-secondary uppercase tracking-wider shrink-0">
                   or continue with
                 </span>
-                <div className="border-t border-white/10 w-full" />
+                <div className="border-t border-white/15 w-full" />
               </div>
 
               {/* Google OAuth Button */}
@@ -299,7 +246,7 @@ export default function LoginPage() {
                 type="button"
                 onClick={handleGoogleLogin}
                 disabled={submitting}
-                className="w-full bg-white/5 hover:bg-white/10 border border-white/15 rounded-2xl py-3.5 px-4 text-sm sm:text-base font-semibold flex items-center justify-center gap-3 transition-all hover:border-white/25 active:scale-[0.99]"
+                className="w-full bg-white/10 hover:bg-white/15 border border-white/20 rounded-2xl py-3.5 px-4 text-sm sm:text-base font-semibold flex items-center justify-center gap-3 transition-all hover:border-white/30 active:scale-[0.99]"
               >
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
                   <path
@@ -322,6 +269,58 @@ export default function LoginPage() {
                 <span>Continue with Google</span>
               </button>
             </form>
+          </div>
+        </div>
+
+        {/* Right Column: Hero showcase over the glowing bank and global network */}
+        <div className="hidden lg:flex lg:col-span-6 xl:col-span-7 flex-col justify-between py-6 pl-8 space-y-10">
+          <div className="space-y-6">
+            <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-peach-500/20 border border-peach-500/35 text-peach-300 text-sm font-semibold tracking-wide backdrop-blur-md">
+              <Sparkles size={16} className="text-peach-400" />
+              <span>Autonomous Global Financial Ledger</span>
+            </div>
+
+            <h1 className="text-6xl xl:text-7xl font-extrabold tracking-tight leading-[1.08] text-white drop-shadow-lg">
+              Next-Gen <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-peach-300 via-peach-400 to-peach-200">
+                AI Banking
+              </span>{" "}
+              Platform<span className="text-peach-500">.</span>
+            </h1>
+
+            <p className="text-lg xl:text-xl text-white/85 max-w-xl font-normal leading-relaxed drop-shadow">
+              Experience real-time double-entry BDT accounting, biometric Face ID authorization,
+              and low-latency ElevenLabs conversational voice assistants.
+            </p>
+          </div>
+
+          {/* Feature Badges with enhanced contrast */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg pt-4">
+            <div className="glass-strong rounded-2xl p-4 flex items-start gap-3.5 border border-white/20">
+              <div className="w-10 h-10 rounded-xl bg-peach-500/25 text-peach-300 flex items-center justify-center shrink-0">
+                <ShieldCheck size={22} />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white">Biometric Face ID</h3>
+                <p className="text-xs text-lavender mt-0.5">Real-time browser-verified facial recognition.</p>
+              </div>
+            </div>
+
+            <div className="glass-strong rounded-2xl p-4 flex items-start gap-3.5 border border-white/20">
+              <div className="w-10 h-10 rounded-xl bg-peach-500/25 text-peach-300 flex items-center justify-center shrink-0">
+                <Zap size={22} />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white">ElevenLabs Voice</h3>
+                <p className="text-xs text-lavender mt-0.5">Instant TTS voice synthesis and STT commands.</p>
+              </div>
+            </div>
+          </div>
+
+          {/* System status pill */}
+          <div className="flex items-center gap-2.5 text-xs text-white/90 font-mono drop-shadow">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400/80 animate-pulse" />
+            <span>Node Core Online • Local Server 127.0.0.1:8000</span>
           </div>
         </div>
       </div>
