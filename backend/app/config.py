@@ -10,7 +10,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 ROOT = Path(__file__).resolve().parent.parent
-load_dotenv(ROOT / ".env", override=True)
+load_dotenv(ROOT / ".env")
 
 # ---- App --------------------------------------------------------------------
 APP_HOST = os.getenv("APP_HOST", "127.0.0.1")
@@ -28,7 +28,7 @@ SWEEPER_INTERVAL_SECONDS = max(1, int(os.getenv("SWEEPER_INTERVAL_SECONDS", "5")
 
 # ---- LLM cascade ------------------------------------------------------------
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
-_cascade_raw = os.getenv("LLM_CASCADE", "deepseek-coder-v2:16b")
+_cascade_raw = os.getenv("LLM_CASCADE", "qwen2.5:7b,qwen2.5:14b,deepseek-coder-v2:16b")
 LLM_CASCADE = [m.strip() for m in _cascade_raw.split(",") if m.strip()]
 
 # OpenRouter (cloud fallback). Activated when a key is set AND the local

@@ -204,13 +204,22 @@ The application uses DeepSeek first. OpenRouter free models are configured as a 
 
 ### Start the backend
 
+You can start the backend using either the convenience script or manual commands:
+
+**Option 1: Quick start script (from repository root)**
+```bash
+./run_backend.sh
+# OR: npm run backend
+```
+
+**Option 2: Manual commands (from `backend` directory)**
 ```bash
 cd backend
 python3 -m venv .venv
 .venv/bin/python -m pip install --upgrade pip
 .venv/bin/pip install -r requirements.txt
 cp .env.example .env
-.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
 Health check:
@@ -219,12 +228,19 @@ Health check:
 curl http://127.0.0.1:8000/health
 ```
 
-A healthy response includes `ollama_reachable: true` and `deepseek-coder-v2:16b` in `llm_models_ready`.
+A healthy response includes `ollama_reachable: true` and your local model (e.g. `qwen2.5:7b`) in `llm_models_ready`.
 
 ### Start the frontend
 
 In another terminal:
 
+**Option 1: Quick start script (from repository root)**
+```bash
+./run_frontend.sh
+# OR: npm run frontend
+```
+
+**Option 2: Manual commands (from `frontend` directory)**
 ```bash
 cd frontend
 npm install

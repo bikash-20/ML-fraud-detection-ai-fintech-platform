@@ -14,8 +14,11 @@ backend/wallet.db-wal
 *.log
 
 # Next.js build output and local dependencies
+.next/
+**/.next/
 frontend/.next/
 frontend/node_modules/
+node_modules/
 frontend/out/
 frontend/tsconfig.tsbuildinfo
 

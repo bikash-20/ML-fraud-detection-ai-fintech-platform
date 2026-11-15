@@ -1,0 +1,13 @@
+{
+  "name": "wallet-v2",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "backend": "cd backend && .venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload",
+    "frontend": "cd frontend && npm run dev",
+    "dev:backend": "cd backend && .venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload",
+    "dev:frontend": "cd frontend && npm run dev",
+    "clean": "rm -rf frontend/.next backend/.next",
+    "test": "cd backend && .venv/bin/pytest tests"
+  }
+}
