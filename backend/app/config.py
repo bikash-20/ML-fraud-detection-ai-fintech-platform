@@ -41,6 +41,12 @@ _openrouter_models = os.getenv(
 )
 OPENROUTER_MODELS = [m.strip() for m in _openrouter_models.split(",") if m.strip()]
 
+# Grok (xAI API). Activated when GROK_API_KEY is set.
+GROK_API_KEY = os.getenv("GROK_API_KEY", "").strip()
+GROK_URL = os.getenv("GROK_URL", "https://api.x.ai/v1").strip()
+_grok_models = os.getenv("GROK_MODELS", "grok-2-latest,grok-beta")
+GROK_MODELS = [m.strip() for m in _grok_models.split(",") if m.strip()]
+
 # ---- TTS --------------------------------------------------------------------
 TTS_ENGINE = os.getenv("TTS_ENGINE", "edge").strip().lower()
 EDGE_TTS_VOICE = os.getenv("EDGE_TTS_VOICE", "en-US-GuyNeural")

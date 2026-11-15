@@ -93,12 +93,16 @@ export function ChatBar({
     const norm = trimmed.toLowerCase();
     const hasDigit = /\d/.test(norm);
     const movementVerb = /\b(send|transfer|pay|request|split)\b/.test(norm);
+    const isBudgetCmd = /^\s*(set budget|fix budget|save for|manage budget)\b/.test(norm);
     // Allow short ledger phrases like "balance?", "show my history", "balance
     // please" — but not "history of rome" (a general knowledge question).
     const ledgerKeyword =
       /^\s*(balance|history)\b/.test(norm) &&
       !/\b(history of|balance sheet)\b/.test(norm);
-    const isCommand = (movementVerb && hasDigit) || ledgerKeyword;
+    const isCommand =
+      (movementVerb && (hasDigit || /\b(to|from|with|between|money|taka|bdt)\b/.test(norm))) ||
+      ledgerKeyword ||
+      isBudgetCmd;
 
     if (isCommand) {
       // Defer to the orchestrator and show a thinking reply.

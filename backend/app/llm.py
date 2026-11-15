@@ -54,6 +54,49 @@ def _stream_ollama(model: str, system: str, user: str) -> Iterator[str]:
                 break
 
 
+# ---- Grok (xAI) slot --------------------------------------------------------
+def _stream_grok(model: str, system: str, user: str) -> Iterator[str]:
+    """Stream a chat completion via Grok (xAI API, OpenAI-compatible)."""
+    api_key = (config.GROK_API_KEY or "").strip()
+    if not api_key:
+        raise RuntimeError("GROK_API_KEY not set")
+    payload = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ],
+        "stream": True,
+        "temperature": 0.0,
+    }
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    with httpx.stream(
+        "POST",
+        f"{config.GROK_URL}/chat/completions",
+        json=payload,
+        headers=headers,
+        timeout=30.0,
+    ) as r:
+        r.raise_for_status()
+        for line in r.iter_lines():
+            if not line or not line.startswith("data:"):
+                continue
+            data = line[5:].strip()
+            if data == "[DONE]":
+                break
+            try:
+                j = json.loads(data)
+            except json.JSONDecodeError:
+                continue
+            delta = (j.get("choices") or [{}])[0].get("delta") or {}
+            content = delta.get("content") or ""
+            if content:
+                yield content
+
+
 # ---- OpenRouter (cloud) slot ------------------------------------------------
 def _stream_openrouter(model: str, system: str, user: str) -> Iterator[str]:
     """Stream a chat completion via OpenRouter (OpenAI-compatible)."""
@@ -111,10 +154,11 @@ def _collect_with_fallback(
     *,
     primary: list[tuple[str, callable]],
 ) -> Optional[str]:
-    """Try `primary` cascade; if all fail, try OpenRouter if configured.
+    """Try `primary` cascade; if all fail, try Grok then OpenRouter if configured.
     Returns the first non-empty response, or None."""
     last_err: Optional[Exception] = None
 
+    # 1. Local Ollama cascade
     for label, fn in primary:
         try:
             chunks = list(fn(label.split(":", 1)[1], system, user))
@@ -128,7 +172,22 @@ def _collect_with_fallback(
             sys.stderr.write(f"[llm] {label} failed: {type(e).__name__}: {e}\n")
             sys.stderr.flush()
 
-    # OpenRouter fallback (free models) — only if a key is configured.
+    # 2. Grok (xAI API) fallback — if configured
+    if (config.GROK_API_KEY or "").strip():
+        for model in config.GROK_MODELS:
+            try:
+                chunks = list(_stream_grok(model, system, user))
+                text = "".join(chunks).strip()
+                if text:
+                    return text
+                sys.stderr.write(f"[llm] grok:{model} empty — falling through\n")
+                sys.stderr.flush()
+            except Exception as e:
+                last_err = e
+                sys.stderr.write(f"[llm] grok:{model} failed: {type(e).__name__}: {e}\n")
+                sys.stderr.flush()
+
+    # 3. OpenRouter fallback (free models) — only if a key is configured.
     if (config.OPENROUTER_API_KEY or "").strip():
         for model in config.OPENROUTER_MODELS:
             try:
@@ -203,24 +262,32 @@ def _is_high_confidence_intent(
     """Whether the regex result is good enough to skip the LLM.
 
     Confidence is high when the regex identified a real money action with
-    a known counterparty (handle or biller), or a clear small-talk
-    intent. Anything ambiguous goes to the LLM.
+    a known counterparty (handle or biller), a clear live DB question, or
+    small-talk intent. Anything ambiguous goes to the LLM.
     """
     action = (intent.get("action") or "").strip().lower()
-    if action in {"greeting", "thanks", "bye", "balance", "history"}:
+    if action in {
+        "greeting", "thanks", "bye", "balance", "history",
+        "spending_recent", "spending_where", "latest_transaction",
+        "send_vs_receive", "requests_made", "requests_received",
+        "recent_splits", "spending_history", "budget_status",
+    }:
         return True
-    if action == "send" or action == "request":
+    if action == "set_budget":
+        return bool(intent.get("amount"))
+    if action in {"send", "request"}:
         recipient = (intent.get("recipient") or "").strip()
         amount = intent.get("amount")
-        if recipient and amount:
-            # Must be a real known handle, not a fuzzy guess.
-            return recipient in known_handles
+        if recipient and recipient in known_handles:
+            return True
+        if amount and amount > 0:
+            return True
         return False
     if action == "split":
         recipients = intent.get("split_recipients") or []
         amount = intent.get("amount")
-        if recipients and amount:
-            return all(r in known_handles for r in recipients)
+        if recipients or (amount and amount > 0):
+            return True
         return False
     if action == "pay_bill":
         biller = (intent.get("biller") or "").strip()
@@ -256,29 +323,125 @@ _GREETINGS = {
 _THANKS = {"thanks", "thank you", "thx", "ty", "জাজ"}
 _BYE = {"bye", "goodbye", "see you", "see ya", "আসসালামু"}
 
+_SPENDING_RECENT_PATTERNS = [
+    r"how much did i spend",
+    r"how much i spent",
+    r"how much spent",
+    r"recent spending",
+    r"spending recently",
+    r"recent expense",
+    r"how much have i spent",
+]
+
+_SPENDING_WHERE_PATTERNS = [
+    r"where did i spend",
+    r"where did my money go",
+    r"where was my money spent",
+    r"where i spent",
+    r"what did i spend on",
+    r"spending breakdown",
+]
+
+_LATEST_TXN_PATTERNS = [
+    r"latest transaction",
+    r"last transaction",
+    r"most recent transaction",
+    r"what was my latest transaction",
+    r"what was my last transaction",
+    r"latest transfer",
+    r"last transfer",
+]
+
+_SEND_VS_RECEIVE_PATTERNS = [
+    r"send or receive",
+    r"sent or received",
+    r"sent vs received",
+    r"did i send or receive",
+    r"have i sent or received",
+]
+
+_REQUESTS_MADE_PATTERNS = [
+    r"requests have i made",
+    r"requests i made",
+    r"requests i have made",
+    r"money requests have i made",
+    r"money requests i made",
+    r"requests i sent",
+    r"requests made",
+]
+
+_REQUESTS_RECEIVED_PATTERNS = [
+    r"requests have i received",
+    r"requests i received",
+    r"requests i have received",
+    r"money requests have i received",
+    r"money requests received",
+    r"requests for me",
+    r"requests to me",
+    r"pending requests",
+]
+
+_RECENT_SPLITS_PATTERNS = [
+    r"recent split",
+    r"recent splits",
+    r"split-money transactions",
+    r"split transactions",
+    r"my splits",
+    r"recent split-money",
+]
+
+_SPENDING_HISTORY_PATTERNS = [
+    r"spending history",
+    r"current spending history",
+    r"overview of my spending",
+    r"my spending history",
+]
+
+_SET_BUDGET_PATTERNS = [
+    r"set budget",
+    r"fix budget",
+    r"budget fixing",
+    r"save for",
+    r"savings goal",
+    r"fix a budget",
+    r"set a budget",
+    r"budget management",
+]
+
+_BUDGET_STATUS_PATTERNS = [
+    r"how is my budget",
+    r"what is my budget",
+    r"check budget",
+    r"budget status",
+    r"my budget",
+    r"budget info",
+]
+
 _BALANCE_TOKENS = {
-    "balance", "bal", "মিউ", "money left", "how much", "what's my balance",
-    "how much money", "how much do i have", "amount", "funds",
+    "balance", "bal", "মিউ", "money left", "how much do i have",
+    "what's my balance", "what is my balance", "how much money do i have",
+    "amount", "funds", "check balance", "current balance",
 }
 
 _HISTORY_TOKENS = {
-    "history", "transactions", "statement", "recent", "last", "past",
+    "history", "transactions", "statement", "statement list",
     "কী করেছি", "history list",
 }
 
 _REQUEST_TRIGGERS = {
     "ask", "request", "demand", "collect", "কর", "ধার", "চাই",
-    "need", "want from",
+    "need", "want from", "ask for money", "request money",
 }
 
 _SEND_TRIGGERS = {
-    "send", "transfer", "pay", "give", "transfer to",
+    "send", "transfer", "pay", "give", "transfer to", "send money",
     "পাঠাও", "পাঠাই", "পাঠাচ্ছি", "দাও", "দিই", "bhechhe", "pathao", "dao",
     "parbe", "পার্বে",
 }
 
 _SPLIT_TRIGGERS = {
-    "split", "divide", "share", "ভাগ", "ভাগ কর", "ভাগাও",
+    "split", "divide", "share", "ভাগ", "ভাগ কর", "ভাগাও", "split money",
+    "split the bill", "split bill",
 }
 
 _BILL_TRIGGERS = {
@@ -316,53 +479,96 @@ def _extract_amount(text: str) -> Optional[float]:
             continue
     if not candidates:
         return None
-    # Prefer the largest candidate (in "send 500 to x" the 500 wins over
-    # stray numbers).
     return max(candidates)
 
 
 def _extract_recipient(text: str, known: list[str]) -> Optional[str]:
-    """Find a known handle in the text. Tries longest-first.
-
-    Robust against STT noise: strips common fillers ("u", "ur", "the", "কে")
-    that STT often inserts around names, and prefers the handle that
-    follows a recipient preposition ("to", "for", "কে", "এ").
-    """
+    """Find a known handle in the text. Tries longest-first."""
     t = _normalize(text)
     candidates = sorted(known, key=len, reverse=True)
 
     # 1. Preposition-priority: handle directly after a recipient preposition.
     prep_re = re.compile(
-        r"\b(?:to|for|towards|toward|with|by|কে|এ|টা)\s+(?:a\s+|an\s+|the\s+|ur\s+|u\s+)?"
+        r"\b(?:to|for|towards|toward|with|by|from|কে|এ|টা)\s+(?:a\s+|an\s+|the\s+|ur\s+|u\s+)?"
         r"(?P<h>[a-z]+)",
         re.IGNORECASE,
     )
+    prep_fallback = None
+    stop_words = {"the", "a", "an", "my", "your", "ur", "someone", "him", "her", "me", "taka", "tk", "bdt"}
     for m in prep_re.finditer(t):
-        # Try progressively shorter suffixes (handle might be "rishad"
-        # but STT appended "x").
         word = m.group("h")
-        # Direct hit.
         if word in known:
             return word
-        # Substring match (handle is prefix/suffix of word).
         for h in candidates:
             if h in word or word in h:
                 return h
+        if not prep_fallback and word not in stop_words:
+            prep_fallback = word
 
     # 2. Substring match anywhere.
     for h in candidates:
         if re.search(rf"\b{re.escape(h)}\b", t):
             return h
-    # 3. Fuzzy: handle inside a word (STT might have glued it).
+    # 3. Fuzzy: handle inside a word.
     for h in candidates:
         if h in t:
             return h
-    return None
+
+    return prep_fallback
+
+
+def _extract_budget_info(text: str) -> tuple[str, Optional[float]]:
+    """Extract festival/purpose and amount for budget commands."""
+    t = _normalize(text)
+    amount = _extract_amount(text)
+    m = re.search(r"\b(?:for|towards|goal|named)\s+([a-zA-Z]+)", t)
+    festival = m.group(1).lower() if m else None
+    if not festival:
+        for common in ("eid", "puja", "boishakh", "vacation", "trip", "wedding", "emergency", "shopping", "gift"):
+            if common in t:
+                festival = common
+                break
+    if not festival:
+        festival = "general"
+    return festival, amount
 
 
 def _classify_action(text: str) -> str:
     t = _normalize(text)
-    # greetings first (very short, no numbers)
+
+    # 1. Specific live database query intents (check BEFORE general tokens)
+    for pat in _SPENDING_RECENT_PATTERNS:
+        if re.search(pat, t):
+            return "spending_recent"
+    for pat in _SPENDING_WHERE_PATTERNS:
+        if re.search(pat, t):
+            return "spending_where"
+    for pat in _LATEST_TXN_PATTERNS:
+        if re.search(pat, t):
+            return "latest_transaction"
+    for pat in _SEND_VS_RECEIVE_PATTERNS:
+        if re.search(pat, t):
+            return "send_vs_receive"
+    for pat in _REQUESTS_MADE_PATTERNS:
+        if re.search(pat, t):
+            return "requests_made"
+    for pat in _REQUESTS_RECEIVED_PATTERNS:
+        if re.search(pat, t):
+            return "requests_received"
+    for pat in _RECENT_SPLITS_PATTERNS:
+        if re.search(pat, t):
+            return "recent_splits"
+    for pat in _SPENDING_HISTORY_PATTERNS:
+        if re.search(pat, t):
+            return "spending_history"
+    for pat in _SET_BUDGET_PATTERNS:
+        if re.search(pat, t):
+            return "set_budget"
+    for pat in _BUDGET_STATUS_PATTERNS:
+        if re.search(pat, t):
+            return "budget_status"
+
+    # greetings (very short, no numbers)
     if len(t.split()) <= 6:
         for g in _GREETINGS:
             if t == g or t.startswith(g + " "):
@@ -383,13 +589,9 @@ def _classify_action(text: str) -> str:
         return "pay_bill"
     if any(k in t for k in _SEND_TRIGGERS):
         return "send"
-    # STT-friendly fallback: "<amount> to <handle>" with no verb. If we can
-    # see a number AND a recipient preposition, default to send rather than
-    # letting it fall to "unknown".
+
     has_number = bool(re.search(r"\d", t))
-    has_prep = bool(re.search(
-        r"\b(to|for|towards|কে|এ)\b", t
-    ))
+    has_prep = bool(re.search(r"\b(to|for|towards|কে|এ)\b", t))
     if has_number and has_prep:
         return "send"
     return "unknown"
@@ -401,6 +603,29 @@ def _regex_intent(text: str, known_handles: list[str], known_billers: list[str])
     amount = _extract_amount(text)
     recipient = _extract_recipient(text, known_handles) if known_handles else None
 
+    if action == "spending_recent":
+        return {"action": "spending_recent", "amount": None, "recipient": None, "biller": None, "split_recipients": []}
+    if action == "spending_where":
+        return {"action": "spending_where", "amount": None, "recipient": None, "biller": None, "split_recipients": []}
+    if action == "latest_transaction":
+        return {"action": "latest_transaction", "amount": None, "recipient": None, "biller": None, "split_recipients": []}
+    if action == "send_vs_receive":
+        return {"action": "send_vs_receive", "amount": None, "recipient": None, "biller": None, "split_recipients": []}
+    if action == "requests_made":
+        return {"action": "requests_made", "amount": None, "recipient": None, "biller": None, "split_recipients": []}
+    if action == "requests_received":
+        return {"action": "requests_received", "amount": None, "recipient": None, "biller": None, "split_recipients": []}
+    if action == "recent_splits":
+        return {"action": "recent_splits", "amount": None, "recipient": None, "biller": None, "split_recipients": []}
+    if action == "spending_history":
+        return {"action": "spending_history", "amount": None, "recipient": None, "biller": None, "split_recipients": []}
+    if action == "set_budget":
+        fest, amt = _extract_budget_info(text)
+        return {"action": "set_budget", "festival": fest, "amount": amt, "recipient": None, "biller": None, "split_recipients": []}
+    if action == "budget_status":
+        fest, _ = _extract_budget_info(text)
+        return {"action": "budget_status", "festival": fest if fest != "general" else None, "amount": None, "recipient": None, "biller": None, "split_recipients": []}
+
     if action == "send" or action == "request":
         return {
             "action": action,
@@ -410,7 +635,6 @@ def _regex_intent(text: str, known_handles: list[str], known_billers: list[str])
             "split_recipients": [],
         }
     if action == "split":
-        # For splits, look for all mentioned handles.
         t = _normalize(text)
         found = [h for h in known_handles if re.search(rf"\b{re.escape(h)}\b", t)]
         return {
@@ -531,8 +755,18 @@ def chat_reply(text: str, user_handle: str) -> str:
 
 _FACTUAL_PHRASE_KINDS = {
     "review_send",
+    "review_request",
     "review_split",
     "review_bill",
+    "missing_amount_send",
+    "missing_recipient_send",
+    "missing_details_send",
+    "missing_amount_request",
+    "missing_recipient_request",
+    "missing_details_request",
+    "missing_recipients_split",
+    "missing_amount_split",
+    "missing_budget_details",
     "executed_send",
     "executed_split",
     "executed_bill",
@@ -545,6 +779,7 @@ _FACTUAL_PHRASE_KINDS = {
     "request_created",
     "request_paid",
     "request_declined",
+    "rephrase",
 }
 
 
@@ -607,25 +842,61 @@ def _deterministic_chat(text: str, user_handle: str) -> str:
     )
 
 
+def _format_bdt_amt(val: Any) -> str:
+    """Format an amount as clean BDT taka text (e.g. 500 taka)."""
+    if val is None:
+        return "the money"
+    try:
+        f = float(str(val).replace(",", ""))
+        if f.is_integer():
+            return f"{int(f)} taka"
+        return f"{f:,.2f} taka"
+    except (ValueError, TypeError):
+        return f"{val} taka"
+
+
 def _deterministic_phrase(text_kind: str, facts: dict) -> str:
-    """Last-resort template so the demo never dead-ends."""
+    """Last-resort template matching the Boss persona and exact requirements."""
     if text_kind == "review_send":
-        return (
-            f"Send ৳{facts.get('amount_bdt')} to {facts.get('recipient')}? "
-            f"New balance will be ৳{facts.get('resulting_balance_bdt')}."
-        )
+        amt_str = _format_bdt_amt(facts.get("amount_bdt"))
+        recipient = facts.get("recipient", "the recipient")
+        return f"Boss, did you mean send {amt_str} to {recipient}?"
+    if text_kind == "review_request":
+        amt_str = _format_bdt_amt(facts.get("amount_bdt"))
+        payer = facts.get("recipient") or facts.get("payer", "the user")
+        return f"Boss, did you mean request {amt_str} from {payer}?"
     if text_kind == "review_split":
-        return (
-            f"Split ৳{facts.get('total_amount_bdt')} across "
-            f"{', '.join(facts.get('recipients', []))} "
-            f"at ৳{facts.get('per_amount_bdt')} each? "
-            f"New balance: ৳{facts.get('resulting_balance_bdt')}."
-        )
+        amt_str = _format_bdt_amt(facts.get("total_amount_bdt"))
+        recipients = ", ".join(facts.get("recipients", []))
+        return f"Boss, did you mean split {amt_str} with {recipients}?"
     if text_kind == "review_bill":
-        return (
-            f"Pay ৳{facts.get('amount_bdt')} to {facts.get('biller')}? "
-            f"New balance: ৳{facts.get('resulting_balance_bdt')}."
-        )
+        amt_str = _format_bdt_amt(facts.get("amount_bdt"))
+        biller = facts.get("biller", "the utility")
+        return f"Boss, did you mean pay {amt_str} to {biller}?"
+    if text_kind == "missing_amount_send":
+        recipient = facts.get("recipient", "the recipient")
+        return f"Boss, how much money would you like to send to {recipient}?"
+    if text_kind == "missing_recipient_send":
+        amt_str = _format_bdt_amt(facts.get("amount_bdt"))
+        return f"Boss, who would you like to send {amt_str} to?"
+    if text_kind == "missing_details_send":
+        return "Boss, how much money would you like to send and to whom?"
+    if text_kind == "missing_amount_request":
+        recipient = facts.get("recipient") or facts.get("payer", "the recipient")
+        return f"Boss, how much money would you like to request from {recipient}?"
+    if text_kind == "missing_recipient_request":
+        amt_str = _format_bdt_amt(facts.get("amount_bdt"))
+        return f"Boss, who would you like to request {amt_str} from?"
+    if text_kind == "missing_details_request":
+        return "Boss, how much would you like to request and from whom?"
+    if text_kind == "missing_recipients_split":
+        amt_str = _format_bdt_amt(facts.get("total_amount_bdt"))
+        return f"Boss, who would you like to split {amt_str} with?"
+    if text_kind == "missing_amount_split":
+        recipients = ", ".join(facts.get("recipients", []))
+        return f"Boss, how much would you like to split with {recipients}?"
+    if text_kind == "missing_budget_details":
+        return "Boss, what festival or goal is this budget for, and how much would you like to set?"
     if text_kind == "executed_send":
         return (
             f"Done, Boss. Sent ৳{facts.get('amount_bdt')} to "

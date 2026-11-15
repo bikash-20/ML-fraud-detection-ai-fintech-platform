@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from .. import engine, llm, resolver
 from ..db import session_scope
 from ..models import Account, Request, RequestStatus, Split, Transaction, TxnStatus, User
+from ..services import assistant_db
 from ..schemas import (
     AgentActRequest,
     AgentActRequestActionRequest,
@@ -63,6 +64,22 @@ def _review_card_for_send(txn: Transaction, session: Session) -> ReviewCard:
         recipient_phone=phone,
         note=txn.note,
         resulting_balance_bdt=resulting,  # post-debit will be lower; we phrase accurately
+        initiator_handle=init.handle,
+        initiator_phone=init.phone,
+    )
+
+
+def _review_card_for_request(req_row: Request, session: Session) -> ReviewCard:
+    init = session.get(User, req_row.asker_user_id)
+    payer = session.get(User, req_row.payer_user_id)
+    current_balance = _post_debit_balance(session, init.id)
+    return ReviewCard(
+        kind="request",
+        amount_bdt=req_row.amount_bdt,
+        recipient_label=payer.handle if payer else None,
+        recipient_phone=payer.phone if payer else None,
+        note=req_row.note,
+        resulting_balance_bdt=current_balance,
         initiator_handle=init.handle,
         initiator_phone=init.phone,
     )
@@ -158,6 +175,46 @@ def agent_act(req: AgentActRequest) -> AgentActResponse:
                 data={"redirect": "/history", "count": history_count},
             )
 
+        # ---- Live Database Queries ----
+        if action == "spending_recent":
+            res = assistant_db.get_recent_spending(s, req.user_id)
+            return AgentActResponse(text=res["text"], action="spending_recent", data=res)
+        if action == "spending_where":
+            res = assistant_db.get_where_spent(s, req.user_id)
+            return AgentActResponse(text=res["text"], action="spending_where", data=res)
+        if action == "latest_transaction":
+            res = assistant_db.get_latest_transaction(s, req.user_id)
+            return AgentActResponse(text=res["text"], action="latest_transaction", data=res)
+        if action == "send_vs_receive":
+            res = assistant_db.get_sent_vs_received(s, req.user_id)
+            return AgentActResponse(text=res["text"], action="send_vs_receive", data=res)
+        if action == "requests_made":
+            res = assistant_db.get_money_requests_made(s, req.user_id)
+            return AgentActResponse(text=res["text"], action="requests_made", data=res)
+        if action == "requests_received":
+            res = assistant_db.get_money_requests_received(s, req.user_id)
+            return AgentActResponse(text=res["text"], action="requests_received", data=res)
+        if action == "recent_splits":
+            res = assistant_db.get_recent_splits(s, req.user_id)
+            return AgentActResponse(text=res["text"], action="recent_splits", data=res)
+        if action == "spending_history":
+            res = assistant_db.get_spending_history(s, req.user_id)
+            return AgentActResponse(text=res["text"], action="spending_history", data=res)
+        if action == "budget_status":
+            res = assistant_db.get_budget_status(s, req.user_id, intent_dict.get("festival"))
+            return AgentActResponse(text=res["text"], action="budget_status", data=res)
+        if action == "set_budget":
+            amt = intent_dict.get("amount")
+            if amt and float(amt) > 0:
+                res = assistant_db.set_or_update_budget(
+                    s, req.user_id, intent_dict.get("festival", "general"), Decimal(str(amt))
+                )
+                return AgentActResponse(text=res["text"], action="set_budget", data=res)
+            return AgentActResponse(
+                text=llm.phrase("missing_budget_details", {}),
+                action="set_budget",
+            )
+
         if action == "send":
             return _handle_send(s, req, intent_dict, handles, user)
         if action == "request":
@@ -176,11 +233,27 @@ def agent_act(req: AgentActRequest) -> AgentActResponse:
 
 def _handle_send(s, req, intent_dict, handles, user) -> AgentActResponse:
     raw_recipient = (intent_dict.get("recipient") or "").strip()
-    if not raw_recipient:
+    raw_amount = intent_dict.get("amount")
+
+    # Missing both amount and recipient
+    if not raw_recipient and (raw_amount is None or float(raw_amount) <= 0):
         return AgentActResponse(
-            text=llm.phrase("rephrase", {}),
+            text=llm.phrase("missing_details_send", {}),
             action="send",
         )
+    # Missing recipient
+    if not raw_recipient:
+        return AgentActResponse(
+            text=llm.phrase("missing_recipient_send", {"amount_bdt": str(raw_amount)}),
+            action="send",
+        )
+    # Missing amount
+    if raw_amount is None or float(raw_amount) <= 0:
+        return AgentActResponse(
+            text=llm.phrase("missing_amount_send", {"recipient": raw_recipient}),
+            action="send",
+        )
+
     try:
         recipient = resolver.resolve_recipient(raw_recipient, handles)
     except resolver.AmbiguousRecipient as e:
@@ -197,7 +270,7 @@ def _handle_send(s, req, intent_dict, handles, user) -> AgentActResponse:
             action="send",
         )
     try:
-        amount = resolver.resolve_amount(intent_dict.get("amount"))
+        amount = resolver.resolve_amount(raw_amount)
     except resolver.ResolutionError as e:
         raise HTTPException(422, e.message)
 
@@ -259,11 +332,27 @@ def _handle_send(s, req, intent_dict, handles, user) -> AgentActResponse:
 def _handle_request_action(s, req, intent_dict, handles, user) -> AgentActResponse:
     """User wants to ASK someone for money."""
     raw_payer = (intent_dict.get("recipient") or "").strip()
-    if not raw_payer:
+    raw_amount = intent_dict.get("amount")
+
+    # Missing both
+    if not raw_payer and (raw_amount is None or float(raw_amount) <= 0):
         return AgentActResponse(
-            text=llm.phrase("rephrase", {}),
+            text=llm.phrase("missing_details_request", {}),
             action="request",
         )
+    # Missing payer
+    if not raw_payer:
+        return AgentActResponse(
+            text=llm.phrase("missing_recipient_request", {"amount_bdt": str(raw_amount)}),
+            action="request",
+        )
+    # Missing amount
+    if raw_amount is None or float(raw_amount) <= 0:
+        return AgentActResponse(
+            text=llm.phrase("missing_amount_request", {"recipient": raw_payer}),
+            action="request",
+        )
+
     try:
         payer_handle = resolver.resolve_recipient(raw_payer, handles)
     except resolver.AmbiguousRecipient as e:
@@ -280,7 +369,7 @@ def _handle_request_action(s, req, intent_dict, handles, user) -> AgentActRespon
             action="request",
         )
     try:
-        amount = resolver.resolve_amount(intent_dict.get("amount"))
+        amount = resolver.resolve_amount(raw_amount)
     except resolver.ResolutionError as e:
         raise HTTPException(422, e.message)
     try:
@@ -293,34 +382,48 @@ def _handle_request_action(s, req, intent_dict, handles, user) -> AgentActRespon
             note=intent_dict.get("note"),
         )
     except engine.IdempotencyReplay_for_request as replay:
-        # Idempotent replay: return the original request state.
-        return AgentActResponse(
-            text=llm.phrase(
-                "request_created",
-                {"payer": payer_handle, "amount_bdt": str(replay.req.amount_bdt)},
-            ),
-            action="request",
-            pending_id=replay.req.id,
-            idempotent_replay=True,
-        )
+        req_row = replay.req
     except engine.EngineError as e:
         raise HTTPException(400, str(e))
+
+    card = _review_card_for_request(req_row, s)
     text = llm.phrase(
-        "request_created",
-        {"payer": payer_handle, "amount_bdt": str(amount)},
+        "review_request",
+        {"amount_bdt": str(amount), "recipient": payer_handle},
     )
-    return AgentActResponse(text=text, action="request", pending_id=req_row.id)
+    return AgentActResponse(
+        text=text,
+        card=card,
+        pending_id=req_row.id,
+        action="request",
+    )
 
 
 def _handle_split(s, req, intent_dict, handles, user) -> AgentActResponse:
     raw_recipients = intent_dict.get("split_recipients") or []
     if not raw_recipients and intent_dict.get("recipient"):
         raw_recipients = [intent_dict["recipient"]]
-    if not raw_recipients:
+    raw_amount = intent_dict.get("amount")
+
+    # Missing both
+    if not raw_recipients and (raw_amount is None or float(raw_amount) <= 0):
         return AgentActResponse(
-            text=llm.phrase("rephrase", {}),
+            text="Boss, who would you like to split with, and what is the total amount?",
             action="split",
         )
+    # Missing recipients
+    if not raw_recipients:
+        return AgentActResponse(
+            text=llm.phrase("missing_recipients_split", {"total_amount_bdt": str(raw_amount)}),
+            action="split",
+        )
+    # Missing amount
+    if raw_amount is None or float(raw_amount) <= 0:
+        return AgentActResponse(
+            text=llm.phrase("missing_amount_split", {"recipients": raw_recipients}),
+            action="split",
+        )
+
     resolved = []
     for r in raw_recipients:
         try:
@@ -339,7 +442,7 @@ def _handle_split(s, req, intent_dict, handles, user) -> AgentActResponse:
                 action="split",
             )
     try:
-        amount = resolver.resolve_amount(intent_dict.get("amount"))
+        amount = resolver.resolve_amount(raw_amount)
     except resolver.ResolutionError as e:
         raise HTTPException(422, e.message)
     try:
@@ -460,7 +563,7 @@ def _handle_pay_bill(s, req, intent_dict, billers, user) -> AgentActResponse:
 def agent_chat(req: AgentChatRequest) -> AgentChatResponse:
     """Free-form conversational endpoint. Always replies — never errors out.
 
-    Used by the chat input bar for greetings / small talk / questions.
+    Used by the chat input bar for greetings / small talk / live DB questions.
     """
     with session_scope() as s:
         u = _user_by_id(s, req.user_id)
@@ -487,6 +590,47 @@ def agent_chat(req: AgentChatRequest) -> AgentChatResponse:
                 text=llm.phrase("history_summary", {"count": count}),
                 action="history",
             )
+
+        # ---- Live DB Financial Queries ----
+        if fallback_intent["action"] == "spending_recent":
+            res = assistant_db.get_recent_spending(s, req.user_id)
+            return AgentChatResponse(text=res["text"], action="spending_recent")
+        if fallback_intent["action"] == "spending_where":
+            res = assistant_db.get_where_spent(s, req.user_id)
+            return AgentChatResponse(text=res["text"], action="spending_where")
+        if fallback_intent["action"] == "latest_transaction":
+            res = assistant_db.get_latest_transaction(s, req.user_id)
+            return AgentChatResponse(text=res["text"], action="latest_transaction")
+        if fallback_intent["action"] == "send_vs_receive":
+            res = assistant_db.get_sent_vs_received(s, req.user_id)
+            return AgentChatResponse(text=res["text"], action="send_vs_receive")
+        if fallback_intent["action"] == "requests_made":
+            res = assistant_db.get_money_requests_made(s, req.user_id)
+            return AgentChatResponse(text=res["text"], action="requests_made")
+        if fallback_intent["action"] == "requests_received":
+            res = assistant_db.get_money_requests_received(s, req.user_id)
+            return AgentChatResponse(text=res["text"], action="requests_received")
+        if fallback_intent["action"] == "recent_splits":
+            res = assistant_db.get_recent_splits(s, req.user_id)
+            return AgentChatResponse(text=res["text"], action="recent_splits")
+        if fallback_intent["action"] == "spending_history":
+            res = assistant_db.get_spending_history(s, req.user_id)
+            return AgentChatResponse(text=res["text"], action="spending_history")
+        if fallback_intent["action"] == "budget_status":
+            res = assistant_db.get_budget_status(s, req.user_id, fallback_intent.get("festival"))
+            return AgentChatResponse(text=res["text"], action="budget_status")
+        if fallback_intent["action"] == "set_budget":
+            amt = fallback_intent.get("amount")
+            if amt and float(amt) > 0:
+                res = assistant_db.set_or_update_budget(
+                    s, req.user_id, fallback_intent.get("festival", "general"), Decimal(str(amt))
+                )
+                return AgentChatResponse(text=res["text"], action="set_budget")
+            return AgentChatResponse(
+                text=llm.phrase("missing_budget_details", {}),
+                action="set_budget",
+            )
+
         text = llm.chat_reply(req.text, u.handle)
     # Best-effort classification so the UI can show different icons.
     norm = req.text.strip().lower()
@@ -867,8 +1011,31 @@ def agent_act_request(req: AgentActRequestActionRequest) -> AgentActResponse:
 # ---- Confirm / Decline ------------------------------------------------------
 @router.post("/confirm", response_model=AgentConfirmResponse)
 def agent_confirm(req: AgentConfirmRequest) -> AgentConfirmResponse:
-    """Execute (or cancel) a pending transaction."""
+    """Execute (or cancel) a pending transaction or request."""
     with session_scope() as s:
+        # Check if this pending_id refers to a Request row (from "request money")
+        req_row = s.get(Request, req.pending_id)
+        if req_row is not None and req_row.asker_user_id == req.user_id:
+            if req.decision == "decline":
+                req_row.status = RequestStatus.DECLINED.value
+                s.flush()
+                return AgentConfirmResponse(
+                    text="Cancelled. Money request was not sent.",
+                    success=False,
+                )
+            # Confirmed: keep it pending for the payer to see on their dashboard
+            payer = s.get(User, req_row.payer_user_id)
+            payer_handle = payer.handle if payer else "the user"
+            current_balance = _post_debit_balance(s, req.user_id)
+            return AgentConfirmResponse(
+                text=llm.phrase(
+                    "request_created",
+                    {"payer": payer_handle, "amount_bdt": str(req_row.amount_bdt)},
+                ),
+                success=True,
+                new_balance_bdt=current_balance,
+            )
+
         if req.decision == "decline":
             try:
                 txn = engine.decline(s, user_id=req.user_id, pending_id=req.pending_id)

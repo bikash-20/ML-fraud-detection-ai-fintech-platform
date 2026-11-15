@@ -383,9 +383,17 @@ class STT:
         model = self.get()
         buf = io.BytesIO(audio_bytes)
         buf.name = "audio.webm"
+        initial_prompt = (
+            "Send money, Request money, Split money, taka, BDT, Rahim, Rishad, "
+            "Arman, Bikash, Boss, budget, balance, transactions, DESCO, Carnival."
+        )
         segs, info = model.transcribe(
-            buf, language=language, beam_size=1,
-            vad_filter=True, condition_on_previous_text=False,
+            buf,
+            language=language,
+            beam_size=1,
+            vad_filter=True,
+            condition_on_previous_text=False,
+            initial_prompt=initial_prompt,
         )
         text = " ".join(s.text.strip() for s in segs).strip()
         return text, info.language, info.duration

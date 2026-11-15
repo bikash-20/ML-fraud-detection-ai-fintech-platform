@@ -18,6 +18,7 @@ DEMO_USERS: list[tuple[str, str]] = [
     ("bikash", "Bikash"),
     ("rishad", "Rishad"),
     ("arman", "Arman"),
+    ("rahim", "Rahim"),
     ("tahzib", "Tahzib"),
     ("srijan", "Srijan"),
     ("mahdin", "Mahdin"),

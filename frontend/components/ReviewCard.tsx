@@ -32,6 +32,14 @@ export function ReviewCard({
             Splitting <span className="text-peach-500">৳{Number(card.amount_bdt).toLocaleString("en-IN")}</span>{" "}
             equally among {card.recipients.join(", ")}.
           </>
+        ) : card.kind === "request" ? (
+          <>
+            Requesting <span className="text-peach-500">৳{Number(card.amount_bdt).toLocaleString("en-IN")}</span>{" "}
+            from <span className="text-peach-500">@{card.recipient_label}</span>
+            {card.recipient_phone ? (
+              <span className="text-lavender"> · {card.recipient_phone}</span>
+            ) : null}
+          </>
         ) : card.recipient_label ? (
           <>
             To <span className="text-peach-500">{card.recipient_label}</span>
@@ -45,11 +53,15 @@ export function ReviewCard({
             ৳{Number(card.amount_bdt).toLocaleString("en-IN")} payment
           </>
         )}
-        <br />
-        New balance:{" "}
-        <span className="text-cream font-medium">
-          ৳{Number(card.resulting_balance_bdt).toLocaleString("en-IN")}
-        </span>
+        {card.kind !== "request" ? (
+          <>
+            <br />
+            New balance:{" "}
+            <span className="text-cream font-medium">
+              ৳{Number(card.resulting_balance_bdt).toLocaleString("en-IN")}
+            </span>
+          </>
+        ) : null}
       </div>
       <div className="flex gap-2">
         <button
