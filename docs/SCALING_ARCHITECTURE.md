@@ -47,7 +47,7 @@ flowchart TD
     subgraph AIGatewayTier["4. Dedicated AI Inference Gateway"]
         AIGateway["AI Gateway (Circuit Breaker & Fallback)"]
         subgraph GPUPool["GPU Inference Worker Fleet (Auto-Scaling EC2 G6/G6e)"]
-            vLLM["LLM Pool (vLLM / TensorRT-LLM)"]
+            vLLM["LLM Pool (vLLM: Llama 70B / Qwen 32B)"]
             Whisper["STT Workers (Faster-Whisper on CUDA)"]
             TTS["TTS Workers (Qwen3 / ElevenLabs)"]
         end
@@ -217,7 +217,7 @@ flowchart TD
 
     subgraph GPUCluster["Dedicated GPU Inference Cluster"]
         AIGateway["AI Gateway (Load Balanced)"]
-        GPU1["EC2 G5.xlarge (vLLM DeepSeek/Qwen)"]
+        GPU1["EC2 G6e / G5 (vLLM: Qwen 32B / Llama 70B)"]
         GPU2["EC2 G5.xlarge (Faster-Whisper STT)"]
         GPU3["EC2 G5.xlarge (TTS Engine)"]
     end
@@ -298,28 +298,94 @@ flowchart TD
 
 ---
 
-## 4. DeepSeek 16B & AI Inference Production Strategy
+## 4. Production AI Inference Strategy: Llama 70B & Qwen 32B
 
-### Why Model Specialization Matters
-While `deepseek-coder-v2:16b` is an exceptional coding model, using a code-specialized model for production FinTech NLU has tradeoffs:
-1. **Instruction Alignment vs Code Synthesis**: Financial intent parsing requires precise entity extraction (amounts, counterparties, currencies) and strict structured JSON without hallucinations.
-2. **Production Recommendation**:
-   - For Intent Parsing & Guardrails: **Qwen 2.5 14B / 32B Instruct** or **DeepSeek-V3** via API or dedicated vLLM.
-   - For Real-Time Voice: Faster-Whisper (STT) + ElevenLabs / Qwen3-TTS (TTS) deployed in parallel worker containers.
+### The Strategic Decision
+While `deepseek-coder-v2:16b` was utilized during local MVP prototyping, code-oriented models are not optimal for production financial voice and conversational banking.
+
+For enterprise scale (10K to 1M+ users), the production strategy standardizes on two industry-leading foundational models:
+1. **Primary High-Efficiency Engine: Qwen 2.5 32B Instruct**
+2. **Flagship Complex Reasoning Engine: Llama 3.3 70B Instruct**
+
+---
+
+### Model Comparison & Production Role Matrix
+
+| Feature / Role | Qwen 2.5 32B Instruct | Llama 3.3 70B Instruct |
+| :--- | :--- | :--- |
+| **Primary Role** | Fast intent extraction, entity parsing, real-time voice replies | Deep conversational reasoning, calibrated financial scoring, complex disputes |
+| **Latency (TTFT)** | **Sub-120ms** (Critical for conversational voice responsiveness) | ~250–400ms (High depth, multi-step validation) |
+| **Structured Output** | Exceptional zero-shot JSON tool-calling without syntax drift | High-fidelity function calling and strict schema conformance |
+| **Multilingual (BD)** | Native high-proficiency Bangla, Banglish, and English parsing | Strong English & multilingual translation and reasoning |
+| **Quantization Target** | FP8 / AWQ (4-bit or 8-bit) | FP8 / AWQ (8-bit) |
+| **Hardware Footprint** | Fits in 1x 80GB GPU or 2x 24GB GPUs (NVIDIA L4 / A10G) | Requires 4x 24GB GPUs (A10G) or 2x 48GB GPUs (L40S) |
+
+---
+
+### GPU Hardware Sizing & AWS Instance Blueprint
+
+To serve high-concurrency traffic without token generation bottlenecks, models are served using **vLLM** configured with **Tensor Parallelism (TP)** across multi-GPU nodes:
+
+#### Tier A: Serving Qwen 2.5 32B Instruct
+- **AWS Instance**: `g6e.2xlarge` (1x NVIDIA L40S 48GB VRAM) or `g5.2xlarge` (1x A10G 24GB with AWQ 4-bit) / `g5.12xlarge` (4x A10G 24GB with TP=2).
+- **VRAM Required**: ~32GB (FP8) or ~18GB (AWQ 4-bit) + 12GB KV Cache pool.
+- **Throughput**: ~180 tokens/sec, supporting 40+ concurrent streaming voice/chat conversations per worker.
+
+#### Tier B: Serving Llama 3.3 70B Instruct
+- **AWS Instance**: `g6e.4xlarge` (2x NVIDIA L40S 48GB = 96GB VRAM, TP=2) or `g5.12xlarge` (4x NVIDIA A10G 24GB = 96GB VRAM, TP=4).
+- **VRAM Required**: ~70GB (FP8) + 26GB KV Cache pool.
+- **Throughput**: ~110 tokens/sec, supporting high-throughput continuous batching.
+
+---
 
 ### High-Throughput Serving Architecture
-```text
-FastAPI Instance 1 ──┐
-FastAPI Instance 2 ──┼──> [ AI Gateway ] ─── Round Robin ───> [ vLLM GPU Worker Pool ]
-FastAPI Instance N ──┘     │ (Token Bucket & Fallback)           ├── Worker 1 (NVIDIA L4)
-                           │                                     ├── Worker 2 (NVIDIA L4)
-                           └── Failure / Saturation ──> Grok / OpenRouter API
+
+```mermaid
+flowchart LR
+    subgraph Clients["API Application Layer"]
+        FastAPI_1["FastAPI Pod 1"]
+        FastAPI_2["FastAPI Pod 2"]
+        FastAPI_N["FastAPI Pod N"]
+    end
+
+    subgraph Gateway["AI Gateway & Router"]
+        Router["Model Router & Circuit Breaker"]
+        RateLimiter["Token Bucket Rate Limiter"]
+    end
+
+    subgraph InferencePool["Dedicated vLLM Worker Fleet"]
+        subgraph WorkerQwen["Qwen 2.5 32B Cluster (Voice & Intent)"]
+            QW_1["Worker 1 (L40S - FP8)"]
+            QW_2["Worker 2 (L40S - FP8)"]
+        end
+        subgraph WorkerLlama["Llama 3.3 70B Cluster (Complex Reasoning)"]
+            LL_1["Worker 1 (2x L40S - TP=2)"]
+            LL_2["Worker 2 (2x L40S - TP=2)"]
+        end
+    end
+
+    subgraph FallbackTier["Cloud Fallback (Zero Downtime)"]
+        Grok["Grok 2 (xAI API)"]
+        OpenRouter["OpenRouter (Llama 70B / Qwen 72B)"]
+        Regex["Deterministic Safe Regex"]
+    end
+
+    FastAPI_1 & FastAPI_2 & FastAPI_N --> Router
+    Router --> RateLimiter
+    RateLimiter -->|Voice / Fast Intent| WorkerQwen
+    RateLimiter -->|Complex Dispute / Financial Reasoning| WorkerLlama
+    Router -.->|On GPU Saturation / Failure| Grok
+    Router -.->|On Cloud API Timeout| OpenRouter
+    OpenRouter -.->|Fail-Safe| Regex
 ```
 
-Using **vLLM** instead of standard Ollama in production unlocks:
-- **PagedAttention**: Reduces KV-cache memory waste by up to 80%.
-- **Continuous Batching**: Processes multiple concurrent user voice requests simultaneously on a single GPU.
-- **OpenAI-Compatible API**: Drop-in replacement for the existing `httpx` streaming client in `backend/app/llm.py`.
+---
+
+### Why vLLM Replaces Ollama in Production
+1. **PagedAttention**: Eliminates memory fragmentation in the KV Cache, allowing up to **5x more concurrent users** on the exact same GPU hardware.
+2. **Continuous Batching**: Dynamically batches incoming user requests at the token level instead of waiting for entire requests to complete.
+3. **Tensor Parallelism (TP)**: Native multi-GPU splitting allows Llama 70B and Qwen 32B to execute synchronously across multiple GPUs with sub-millisecond inter-GPU communication via NVLink.
+4. **OpenAI Protocol Compliance**: The vLLM server exposes a native OpenAI `/v1/chat/completions` endpoint, ensuring seamless plug-and-play compatibility with `backend/app/llm.py`.
 
 ---
 
@@ -331,7 +397,7 @@ Using **vLLM** instead of standard Ollama in production unlocks:
 | **API Backend** | Render Web Service | AWS ECS Fargate | AWS ECS / EKS (Auto-scaling) |
 | **Database** | Render MySQL | Amazon RDS MySQL Multi-AZ | Aurora MySQL + RDS Proxy |
 | **Caching & Locking** | In-Memory Python Dict | ElastiCache Redis (Single node) | ElastiCache Redis Cluster (Multi-AZ) |
-| **LLM Inference** | Ollama / Grok API | EC2 G5 (A10G) vLLM | Auto-scaling G6e Fleet / vLLM |
+| **LLM Inference** | Ollama / Grok API / OpenRouter | EC2 G6e vLLM (Qwen 2.5 32B) | Auto-scaling G6e Fleet (Llama 3.3 70B & Qwen 2.5 32B TP) |
 | **STT Engine** | Local Faster-Whisper | Dedicated Worker (T4/L4) | Triton Inference Server (GPU Batch) |
 | **TTS Engine** | ElevenLabs / Edge-TTS | Dedicated Qwen3 Worker | Parallel GPU Workers + ElevenLabs |
 | **Message Queue** | In-Memory EventBus | AWS SQS FIFO | SQS FIFO + Amazon MSK (Kafka) |
