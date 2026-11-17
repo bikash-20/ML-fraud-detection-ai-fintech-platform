@@ -306,25 +306,89 @@ class AdminAIAssistant:
         }
 
     @classmethod
+    def _is_casual_conversation(cls, query: str) -> bool:
+        """Detect whether a query is small talk/greeting vs an operational financial/fraud query."""
+        import re
+        q = query.strip().lower()
+        cleaned = re.sub(r"[^a-zA-Z0-9\s]", "", q).strip()
+        words = cleaned.split()
+        if not words:
+            return True
+
+        greetings = {"hi", "hello", "hey", "hola", "salam", "assalam", "assalamu alaikum", "good morning", "good evening", "good afternoon", "yo"}
+        smalltalk_phrases = [
+            "how are you", "who are you", "what can you do", "help", "help me",
+            "thank you", "thanks", "thx", "bye", "goodbye", "good day", "what is your name"
+        ]
+
+        if cleaned in greetings:
+            return True
+        for st in smalltalk_phrases:
+            if st in cleaned:
+                return True
+
+        domain_keywords = {
+            "suspicious", "fraud", "risk", "highest", "alert", "alerts",
+            "pattern", "patterns", "anomaly", "anomalous", "volume", "turnover",
+            "spent", "transaction", "transactions", "txn", "txns", "user", "users",
+            "repeated", "unresolved", "investigation", "investigations", "health",
+            "system", "engine", "service", "flag", "flagged", "reasons", "today", "money"
+        }
+        if any(w in domain_keywords for w in words):
+            return False
+
+        if words and words[0] in greetings and len(words) <= 5:
+            return True
+
+        return False
+
+    @classmethod
     def answer_admin_query(cls, session: Session, query: str) -> Dict[str, Any]:
-        """Dispatch query to the live database, then synthesize a natural response using the multi-model cascade."""
+        """Senior-architecture AI query handler:
+        1. Casual conversation / greetings are kept strictly in the LLM's hands with 0 DB queries.
+        2. Domain / operational queries target ONLY the specific live database table required,
+           grounding the multi-model cascade with factual records.
+        """
+        from .. import llm
+
+        # 1. Casual conversation: No DB queries, pure LLM conversational intelligence
+        if cls._is_casual_conversation(query):
+            system_prompt = (
+                "You are the FinTech Fraud Intelligence AI Assistant speaking with Administrator Talukder. "
+                "You assist with monitoring transactions, fraud alerts, risk scores, and platform security. "
+                "Respond naturally, politely, and concisely (1 to 2 sentences) to the administrator's greeting or question. "
+                "Address them respectfully as Talukder or Admin. "
+                "Ask what they would like to investigate or monitor today. "
+                "Do NOT dump or cite unrequested transaction numbers or fraud statistics."
+            )
+            fallback_text = (
+                "Hello Talukder! I am your live Fraud Intelligence AI Assistant. "
+                "I can analyze suspicious transactions, risk scores, velocities, or fraud alerts. "
+                "What would you like to investigate?"
+            )
+            try:
+                ai_text = llm.generate_cascade(system_prompt, query).strip()
+                ai_text = ai_text.strip().strip('"').strip("`")
+                if not ai_text:
+                    ai_text = fallback_text
+            except Exception as e:
+                log.warning("Cascade greeting fallback: %s", e)
+                ai_text = fallback_text
+
+            return {
+                "intent": "greeting",
+                "response": ai_text,
+                "data": None,
+                "timestamp": _utcnow().isoformat(),
+            }
+
+        # 2. Targeted Live Database Query: Fetch ONLY the dataset requested
         q = query.lower()
-
-        # Always fetch live summary stats for broad context
-        today_stats = cls.get_suspicious_today(session)
-        high_risk_stats = cls.get_highest_risk_txns(session, limit=5)
-        volume_stats = cls.get_volume_summary(session)
-        unresolved_stats = cls.get_unresolved_investigations(session)
-
-        # Specific query classification
-        if any(w in q for w in ["hi", "hello", "hey", "salam", "morning", "evening"]):
-            data = today_stats
-            intent = "greeting"
-        elif any(w in q for w in ["suspicious", "today", "how many"]):
-            data = today_stats
+        if any(w in q for w in ["suspicious", "today", "how many"]):
+            data = cls.get_suspicious_today(session)
             intent = "suspicious_today"
-        elif any(w in q for w in ["highest", "highest risk", "top risk", "risky"]):
-            data = high_risk_stats
+        elif any(w in q for w in ["highest", "highest risk", "top risk", "risky", "high risk"]):
+            data = cls.get_highest_risk_txns(session, limit=5)
             intent = "highest_risk"
         elif any(w in q for w in ["pattern", "anomalous", "unusual pattern", "anomaly"]):
             data = cls.get_unusual_patterns(session)
@@ -339,45 +403,28 @@ class AdminAIAssistant:
             data = cls.get_flag_reasons_breakdown(session)
             intent = "flag_reasons"
         elif any(w in q for w in ["volume", "total money", "turnover", "spent"]):
-            data = volume_stats
+            data = cls.get_volume_summary(session)
             intent = "volume_summary"
         elif any(w in q for w in ["unresolved", "investigation", "pending alert"]):
-            data = unresolved_stats
+            data = cls.get_unresolved_investigations(session)
             intent = "unresolved_investigations"
         elif any(w in q for w in ["health", "properly", "status", "working", "service"]):
             data = cls.get_fraud_service_health(session)
             intent = "service_health"
         else:
-            data = today_stats
+            data = cls.get_suspicious_today(session)
             intent = "general_overview"
 
-        # Holistic live facts context
-        live_facts = {
-            "query_specific_data": data,
-            "platform_overview": {
-                "suspicious_today": today_stats.get("suspicious_count", 0),
-                "high_risk_today": today_stats.get("high_risk_count", 0),
-                "total_evaluated_today": today_stats.get("total_today", 0),
-                "total_volume_bdt": volume_stats.get("total_volume_bdt", 0),
-                "completed_transactions": volume_stats.get("completed_transactions", 0),
-                "unresolved_investigations": unresolved_stats.get("unresolved_count", 0),
-                "highest_risk_recorded": high_risk_stats.get("items", [{}])[0].get("risk_score", 0) if high_risk_stats.get("items") else 0,
-            },
-        }
-
-        factual_context = json.dumps(live_facts, indent=2)
+        # Ground the LLM with only the specific database facts
         system_prompt = (
             "You are the FinTech Fraud Intelligence AI Assistant speaking with Administrator Talukder. "
             "You have live, direct access to the real production database records. "
-            "Answer the question naturally, intelligently, and concisely (2 to 4 sentences). "
+            "Answer the question concisely, directly, and accurately (1 to 3 sentences). "
             "Address the administrator respectfully as Talukder or Admin. "
-            "If it is a greeting, greet Talukder warmly and give a one-sentence operational snapshot. "
-            "If asking about transactions, risk, alerts, or volume, use the exact facts from the database context. "
-            "Never invent numbers or transactions.\n\n"
-            f"LIVE DATABASE FACTS:\n{factual_context}"
+            "Use the exact facts from the database records provided below. Never invent numbers.\n\n"
+            f"LIVE DATABASE RECORDS:\n{json.dumps(data, indent=2)}"
         )
 
-        from .. import llm
         try:
             ai_text = llm.generate_cascade(system_prompt, query).strip()
             ai_text = ai_text.strip().strip('"').strip("`")

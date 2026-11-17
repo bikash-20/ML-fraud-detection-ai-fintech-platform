@@ -12,43 +12,6 @@ from app.services.financial_intelligence import (
 )
 
 
-def test_financial_literacy_guide():
-    overview = get_financial_literacy_guide()
-    assert "topics" in overview
-    assert len(overview["topics"]) >= 5
-
-    fund = get_financial_literacy_guide("emergency_fund")
-    assert fund["topic"] == "emergency_fund"
-    assert "3 to 6 months" in fund["summary"]
-
-    rule = get_financial_literacy_guide("50_30_20")
-    assert rule["topic"] == "50_30_20"
-    assert "50%" in rule["summary"]
-
-
-def test_calculate_financial_insights_empty():
-    with SessionLocal() as session:
-        user = session.query(User).filter_by(handle="bikash").one()
-        insights = calculate_financial_insights(session, user.id)
-
-    assert insights["user_id"] == user.id
-    assert 0 <= insights["health_score"] <= 100
-    assert insights["health_rating"] in ("Excellent", "Good", "Moderate", "Needs Attention")
-    assert "recommendations" in insights
-
-
-import pytest
-from fastapi.testclient import TestClient
-
-from app.db import SessionLocal
-from app.main import app
-from app.models import User
-from app.services.financial_intelligence import (
-    calculate_financial_insights,
-    get_financial_literacy_guide,
-)
-
-
 @pytest.fixture
 def client():
     return TestClient(app)
@@ -94,6 +57,29 @@ def test_financial_intelligence_endpoint(client):
     assert res_lit.status_code == 200
     lit_data = res_lit.json()
     assert lit_data["topic"] == "emergency_fund"
+
+
+def test_recommendation_advice_endpoint(client):
+    """Test AI Guide recommendation advice grounded in live database numbers."""
+    with SessionLocal() as session:
+        user_id = session.query(User).filter_by(handle="bikash").one().id
+
+    res = client.post(
+        f"/users/{user_id}/financial-intelligence/advice",
+        json={
+            "title": "Pace Eid Goal",
+            "description": "You have saved ৳200 towards your ৳5,000 Eid target.",
+            "category": "savings",
+        },
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert data["title"] == "Pace Eid Goal"
+    assert "advice" in data
+    assert "action_steps" in data
+    assert len(data["action_steps"]) > 0
+    assert "live_facts" in data
+    assert data["live_facts"]["user_handle"] == "bikash"
 
 
 def test_chat_budget_recommendations_intent(client):

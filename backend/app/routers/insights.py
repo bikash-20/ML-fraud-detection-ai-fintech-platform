@@ -15,8 +15,10 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
+from typing import Optional
 
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -227,9 +229,11 @@ def tags_for_history(user_id: int, limit: int = 50) -> dict:
             s.query(Transaction.id)
             .filter(
                 (Transaction.from_account_id == account.id)
-                | (Transaction.to_account_id == account.id)
+                | (Transaction.to_account_id == account.id),
+                Transaction.status == TxnStatus.COMPLETED.value,
+                Transaction.completed_at.isnot(None),
             )
-            .order_by(Transaction.created_at.desc())
+            .order_by(Transaction.completed_at.desc(), Transaction.id.desc())
             .limit(limit)
             .all()
         )
@@ -257,4 +261,100 @@ def get_user_financial_literacy(user_id: int, topic: str | None = None) -> dict:
     """Returns curated financial literacy guides and best practices."""
     from ..services.financial_intelligence import get_financial_literacy_guide
     return get_financial_literacy_guide(topic)
+
+
+class RecommendationAdviceRequest(BaseModel):
+    title: str
+    description: Optional[str] = None
+    category: Optional[str] = None
+
+
+@router.post("/users/{user_id}/financial-intelligence/advice")
+def get_recommendation_advice(user_id: int, req: RecommendationAdviceRequest) -> dict:
+    """Live-database grounded AI advice for a specific budget recommendation.
+
+    Synthesizes concrete steps, taka allocations, and velocity adjustments
+    using the user's real database records via the multi-model cascade.
+    """
+    import json
+    from .. import llm
+    from ..services.financial_intelligence import calculate_financial_insights
+
+    with session_scope() as s:
+        user = s.get(User, user_id)
+        if user is None:
+            raise HTTPException(404, "user not found")
+        acct = s.query(Account).filter_by(user_id=user_id).one()
+        insights = calculate_financial_insights(s, user_id)
+
+        live_facts = {
+            "user_handle": user.handle,
+            "balance_bdt": float(acct.balance_bdt),
+            "spending_last_30_days_bdt": insights.get("total_spent_30d_bdt"),
+            "spending_last_7_days_bdt": insights.get("total_spent_7d_bdt"),
+            "weekly_velocity_pct": insights.get("weekly_velocity_pct"),
+            "budget_health_score": insights.get("health_score"),
+            "category_breakdown": insights.get("category_breakdown", []),
+            "target_recommendation": {
+                "title": req.title,
+                "description": req.description,
+                "category": req.category,
+            },
+        }
+
+        system_prompt = (
+            "You are Wallet AI Financial Guide — an expert personal finance advisor for Bangladesh. "
+            "Address the user as 'Boss'. "
+            "The user asked for practical guidance on this budget recommendation: "
+            f"'{req.title}' ({req.description}).\n\n"
+            f"LIVE USER DATABASE FINANCIALS:\n{json.dumps(live_facts, indent=2)}\n\n"
+            "Provide clear, encouraging, actionable financial guidance in 2 to 3 sentences. "
+            "Include concrete taka amounts based on their live numbers and suggest exactly how to execute this recommendation. "
+            "Never invent unrelated numbers."
+        )
+
+        try:
+            advice_text = llm.generate_cascade(system_prompt, f"How can I implement {req.title}?").strip()
+            advice_text = advice_text.strip().strip('"').strip("`")
+            if not advice_text:
+                advice_text = req.description or "Pacing your expenses weekly helps maintain budget stability."
+        except Exception as e:
+            advice_text = req.description or "Pacing your expenses weekly helps maintain budget stability."
+
+        # Concrete actionable steps
+        cat = (req.category or "").lower()
+        title_lower = req.title.lower()
+        desc_lower = (req.description or "").lower()
+
+        if "other" in title_lower or "discretionary" in desc_lower:
+            steps = [
+                "Review recent miscellaneous sends and dining expenses.",
+                "Cap weekly non-essential transfers to keep ৳500+ in reserve.",
+                "Use festival savings pockets to lock away surplus balance."
+            ]
+        elif "goal" in title_lower or "savings" in cat or "eid" in title_lower:
+            steps = [
+                "Set an automated weekly transfer of ৳500–৳1,000 to your savings pocket.",
+                "Review active festival targets before making large transfers.",
+                "Keep savings separate from your main daily transaction balance."
+            ]
+        elif "velocity" in title_lower or "budget" in cat:
+            steps = [
+                "Pause high-value non-urgent transfers for the next 48–72 hours.",
+                "Pace out peer-to-peer sends to bring weekly velocity back to baseline.",
+                "Check your balance before sending money to stay above emergency minimums."
+            ]
+        else:
+            steps = [
+                "Track upcoming recurring expenses in your calendar.",
+                "Allocate small regular deposits towards your targets.",
+                "Monitor spending velocity on your intelligence dashboard."
+            ]
+
+        return {
+            "title": req.title,
+            "advice": advice_text,
+            "action_steps": steps,
+            "live_facts": live_facts,
+        }
 

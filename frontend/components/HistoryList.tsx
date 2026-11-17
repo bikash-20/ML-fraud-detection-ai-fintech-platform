@@ -3,17 +3,31 @@
 import { Txn } from "@/lib/api";
 
 export function HistoryList({ txns }: { txns: Txn[] }) {
-  if (txns.length === 0) {
+  // Only display confirmed, completed transactions in recent history.
+  // Any unconfirmed, pending, cancelled, or interrupted transfers are strictly excluded.
+  const completedTxns = txns.filter(
+    (t) => t.status === "completed" && t.completed_at
+  );
+
+  if (completedTxns.length === 0) {
     return (
       <div className="text-center text-lavender py-8 text-sm">
-        No transactions yet. Send some ৳ to get started.
+        No completed transactions yet. Send some ৳ to get started.
       </div>
     );
   }
   return (
     <ul className="flex flex-col gap-1">
-      {txns.map((t) => {
+      {completedTxns.map((t) => {
         const isIn = t.direction === "in";
+        const counterpartyDisplay =
+          t.counterparty ??
+          (t.kind === "savings"
+            ? "Festival Savings"
+            : t.kind === "bill"
+            ? "Utility Bill"
+            : "Wallet Transfer");
+
         return (
           <li
             key={t.id}
@@ -32,11 +46,10 @@ export function HistoryList({ txns }: { txns: Txn[] }) {
               </div>
               <div className="min-w-0 flex-1">
                 <div className="text-cream text-sm font-medium truncate">
-                  {t.counterparty ?? (t.kind === "bill" ? "Bill" : "Unknown")}
+                  {counterpartyDisplay}
                 </div>
                 <div className="text-xs text-lavender">
-                  {t.kind === "split_child" ? "split" : t.kind} ·{" "}
-                  {t.status}
+                  {t.kind === "split_child" ? "split" : t.kind} · completed
                   {t.note ? ` · ${t.note}` : ""}
                 </div>
               </div>

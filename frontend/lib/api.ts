@@ -341,6 +341,16 @@ export const api = {
       "GET",
       `/users/${userId}/financial-literacy${topic ? `?topic=${encodeURIComponent(topic)}` : ""}`
     ),
+  getRecommendationAdvice: (
+    userId: number,
+    body: { title: string; description?: string; category?: string }
+  ) =>
+    httpJson<{
+      title: string;
+      advice: string;
+      action_steps: string[];
+      live_facts: Record<string, unknown>;
+    }>("POST", `/users/${userId}/financial-intelligence/advice`, body),
 
   // ---- Dedicated Admin Intelligence Platform ------------------------------
   adminLogin: (body: { phone: string; password: string }) =>

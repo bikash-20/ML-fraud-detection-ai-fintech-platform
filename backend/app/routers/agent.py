@@ -709,7 +709,23 @@ def agent_chat(req: AgentChatRequest) -> AgentChatResponse:
                 action="set_budget",
             )
 
-        # Conversational query — provide live database financial facts
+        # Senior Architecture: Classify Casual Small Talk vs Financial Advisory Query
+        norm = req.text.strip().lower()
+        is_greeting = any(g in norm for g in ("hi", "hello", "hey", "salam", "assalam", "assalamu alaikum", "morning", "evening"))
+        is_thanks = any(t in norm for t in ("thanks", "thank you", "thx", "shukriya"))
+        is_bye = any(b in norm for b in ("bye", "goodbye", "see you", "allah hafez", "tata"))
+        is_smalltalk = any(st in norm for st in ("how are you", "who are you", "what are you", "what can you do", "help me"))
+
+        finance_signals = ("optimize", "velocity", "recommend", "advice", "saving", "spend", "budget", "target", "guidance")
+        is_advice_query = any(w in norm for w in finance_signals)
+
+        # 1. Casual Chat: Keep in LLM hands with ZERO database load or fact-dumping
+        if (is_greeting or is_thanks or is_bye or is_smalltalk) and not is_advice_query:
+            action = "greeting" if is_greeting else "thanks" if is_thanks else "bye" if is_bye else "smalltalk"
+            text = llm.chat_reply(req.text, u.handle, user_facts=None)
+            return AgentChatResponse(text=text, action=action)
+
+        # 2. Financial Advisory / Guidance: Ground LLM with live database financial facts
         from ..services import financial_intelligence
         insights = financial_intelligence.calculate_financial_insights(s, req.user_id)
         current_balance = _post_debit_balance(s, req.user_id)
@@ -726,16 +742,7 @@ def agent_chat(req: AgentChatRequest) -> AgentChatResponse:
             ],
         }
         text = llm.chat_reply(req.text, u.handle, user_facts=user_facts)
-    # Best-effort classification so the UI can show different icons.
-    norm = req.text.strip().lower()
-    action = "fallback"
-    if any(g in norm for g in ("hi", "hello", "hey", "salam", "assalam")):
-        action = "greeting"
-    elif any(g in norm for g in ("thanks", "thank you", "thx")):
-        action = "thanks"
-    elif any(g in norm for g in ("bye", "goodbye")):
-        action = "bye"
-    return AgentChatResponse(text=text, action=action)
+        return AgentChatResponse(text=text, action="financial_advice" if is_advice_query else "fallback")
 
 
 # ---- Explicit split (N-way) ------------------------------------------------

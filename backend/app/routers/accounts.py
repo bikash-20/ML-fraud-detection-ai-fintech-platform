@@ -174,8 +174,21 @@ def _format_txn_for_user(txn: Transaction, user_id: int, session: Session) -> Tx
             b = session.get(Biller, txn.biller_id)
             if b:
                 counterparty = b.name
+        elif txn.kind == "savings":
+            counterparty = "Festival Savings"
+        else:
+            counterparty = "Savings Goal"
     else:
         direction = "in"
+        counterparty = "Deposit"
+
+    if counterparty is None:
+        if txn.kind == "savings":
+            counterparty = "Festival Savings"
+        elif txn.kind == "bill":
+            counterparty = "Utility Bill"
+        else:
+            counterparty = "Wallet Transfer"
 
     return TxnOut(
         id=txn.id,
@@ -193,21 +206,28 @@ def _format_txn_for_user(txn: Transaction, user_id: int, session: Session) -> Tx
 
 @router.get("/users/{user_id}/history", response_model=HistoryResponse)
 def get_history(user_id: int, limit: int = 50) -> HistoryResponse:
-    """Return recent txns + a 14-day balance timeline."""
+    """Return recent txns + a 14-day balance timeline.
+
+    Only strictly COMPLETED and confirmed transactions are returned in recent history.
+    Pending, cancelled, declined, or interrupted transactions are excluded so that
+    history accurately reflects real funds debited or credited after user confirmation.
+    """
     with session_scope() as s:
         u = s.get(User, user_id)
         if u is None:
             raise HTTPException(404, "user not found")
         acct = s.query(Account).filter_by(user_id=u.id).one()
 
-        # Pull txns involving this user's account, sorted desc.
+        # Pull strictly completed, confirmed transactions involving this user's account
         rows = (
             s.query(Transaction)
             .filter(
                 (Transaction.from_account_id == acct.id)
-                | (Transaction.to_account_id == acct.id)
+                | (Transaction.to_account_id == acct.id),
+                Transaction.status == TxnStatus.COMPLETED.value,
+                Transaction.completed_at.isnot(None),
             )
-            .order_by(Transaction.created_at.desc())
+            .order_by(Transaction.completed_at.desc(), Transaction.id.desc())
             .limit(limit)
             .all()
         )

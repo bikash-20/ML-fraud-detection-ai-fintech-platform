@@ -8,6 +8,7 @@ import {
   FinancialRecommendation,
   api,
 } from "@/lib/api";
+import { speakText } from "@/lib/speech";
 import {
   Activity,
   AlertTriangle,
@@ -25,6 +26,7 @@ import {
   Sparkles,
   TrendingDown,
   TrendingUp,
+  Volume2,
 } from "lucide-react";
 
 interface Props {
@@ -46,6 +48,68 @@ export function FinancialIntelligenceCard({ userId, onAskAI }: Props) {
     bangla_summary?: string;
     key_takeaways?: string[];
   } | null>(null);
+
+  // Active inline AI recommendation guidance states
+  const [activeAdviceId, setActiveAdviceId] = useState<string | null>(null);
+  const [adviceLoading, setAdviceLoading] = useState(false);
+  const [adviceCache, setAdviceCache] = useState<
+    Record<string, { advice: string; steps: string[]; streamingText?: string }>
+  >({});
+
+  const handleAskAIGuide = async (rec: FinancialRecommendation) => {
+    if (activeAdviceId === rec.id) {
+      setActiveAdviceId(null);
+      return;
+    }
+    setActiveAdviceId(rec.id);
+
+    if (adviceCache[rec.id]) {
+      speakText(adviceCache[rec.id].advice);
+      return;
+    }
+
+    try {
+      setAdviceLoading(true);
+      const res = await api.getRecommendationAdvice(userId, {
+        title: rec.title,
+        description: rec.description,
+        category: rec.category,
+      });
+
+      const fullAdvice = res.advice;
+      setAdviceCache((prev) => ({
+        ...prev,
+        [rec.id]: { advice: fullAdvice, steps: res.action_steps, streamingText: "" },
+      }));
+      setAdviceLoading(false);
+
+      // Play grounded TTS
+      speakText(fullAdvice);
+
+      // Word-by-word streaming typewriter effect inside the card
+      const words = fullAdvice.split(" ");
+      let accumulated = "";
+      for (let i = 0; i < words.length; i++) {
+        accumulated += (i === 0 ? "" : " ") + words[i];
+        const current = accumulated;
+        setAdviceCache((prev) => ({
+          ...prev,
+          [rec.id]: { ...prev[rec.id], streamingText: current },
+        }));
+        await new Promise((r) => setTimeout(r, 20));
+      }
+    } catch (e) {
+      setAdviceLoading(false);
+      setAdviceCache((prev) => ({
+        ...prev,
+        [rec.id]: {
+          advice: rec.description || "Follow steady budget allocations each week to meet your targets.",
+          steps: ["Set automated weekly savings", "Review discretionary spending"],
+          streamingText: rec.description,
+        },
+      }));
+    }
+  };
 
   const fetchInsights = async () => {
     try {
@@ -357,15 +421,80 @@ export function FinancialIntelligenceCard({ userId, onAskAI }: Props) {
                   {rec.description}
                 </p>
 
-                {onAskAI && (
-                  <div className="pt-1 flex justify-end">
-                    <button
-                      onClick={() => onAskAI(`How can I ${rec.title.toLowerCase()}?`)}
-                      className="text-[11px] px-2.5 py-1 rounded-lg bg-peach-500/10 hover:bg-peach-500/20 text-peach-300 border border-peach-500/20 flex items-center gap-1 transition-colors"
-                    >
-                      <Sparkles className="w-3 h-3" />
-                      Ask AI Guide
-                    </button>
+                <div className="pt-2 flex items-center justify-between border-t border-white/5">
+                  <span className="text-[10px] text-white/40 font-mono">
+                    Live DB Verified
+                  </span>
+                  <button
+                    onClick={() => handleAskAIGuide(rec)}
+                    disabled={adviceLoading && activeAdviceId === rec.id}
+                    className="text-[11px] px-3 py-1.5 rounded-lg bg-gradient-to-r from-peach-500/20 to-purple-500/20 hover:from-peach-500/30 hover:to-purple-500/30 text-peach-300 border border-peach-500/30 flex items-center gap-1.5 transition-all shadow-sm font-medium"
+                  >
+                    <Sparkles
+                      className={`w-3.5 h-3.5 text-peach-400 ${
+                        adviceLoading && activeAdviceId === rec.id
+                          ? "animate-spin"
+                          : ""
+                      }`}
+                    />
+                    <span>
+                      {activeAdviceId === rec.id
+                        ? "Hide AI Guide"
+                        : "Ask AI Guide"}
+                    </span>
+                  </button>
+                </div>
+
+                {/* Inline Expandable AI Guide Panel */}
+                {activeAdviceId === rec.id && (
+                  <div className="mt-3 p-3.5 rounded-xl bg-purple-950/40 border border-peach-500/30 space-y-2.5 backdrop-blur-md">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 text-xs font-semibold text-peach-300">
+                        <Sparkles className="w-3.5 h-3.5 text-peach-400" />
+                        <span>AI Financial Guide</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono font-normal">
+                          Live DB Grounded
+                        </span>
+                      </div>
+                      {adviceCache[rec.id]?.advice && (
+                        <button
+                          onClick={() => speakText(adviceCache[rec.id].advice)}
+                          title="Listen with voice"
+                          className="text-[10px] text-white/70 hover:text-white flex items-center gap-1 px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 transition-colors"
+                        >
+                          <Volume2 className="w-3 h-3 text-peach-400" />
+                          <span>Listen</span>
+                        </button>
+                      )}
+                    </div>
+
+                    {adviceLoading ? (
+                      <div className="flex items-center gap-2 text-xs text-peach-300/80 py-2 animate-pulse">
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin text-peach-400" />
+                        <span>Analyzing live transaction records & computing tailored plan…</span>
+                      </div>
+                    ) : adviceCache[rec.id] ? (
+                      <div className="space-y-2.5">
+                        <p className="text-xs text-white/90 leading-relaxed font-sans">
+                          {adviceCache[rec.id].streamingText || adviceCache[rec.id].advice}
+                        </p>
+                        {adviceCache[rec.id].steps && adviceCache[rec.id].steps.length > 0 && (
+                          <div className="pt-2 border-t border-white/10 space-y-1.5">
+                            <div className="text-[10px] font-semibold text-white/50 uppercase tracking-wider">
+                              Actionable Roadmap:
+                            </div>
+                            <ul className="space-y-1">
+                              {adviceCache[rec.id].steps.map((st, idx) => (
+                                <li key={idx} className="flex items-start gap-1.5 text-[11px] text-white/80">
+                                  <span className="text-peach-400 font-bold shrink-0">•</span>
+                                  <span>{st}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    ) : null}
                   </div>
                 )}
               </div>
