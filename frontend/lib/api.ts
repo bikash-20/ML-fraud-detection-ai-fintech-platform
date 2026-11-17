@@ -62,6 +62,10 @@ export type ReviewCard = {
   resulting_balance_bdt: string;
   initiator_handle: string;
   initiator_phone: string;
+  risk_level?: "low" | "medium" | "high" | null;
+  risk_score?: number | null;
+  security_analysis?: string[] | null;
+  requires_biometric?: boolean | null;
 };
 
 export type AgentActResponse = {
@@ -87,6 +91,8 @@ export type HistoryResponse = {
   txns: Txn[];
   timeline: { date: string; balance: number }[];
 };
+
+import { readAdminToken } from "./session";
 
 const BASE = "/api";
 
@@ -125,6 +131,37 @@ async function httpJson<T>(
   const r = await fetch(`${BASE}${path}`, {
     method,
     headers: body ? { "Content-Type": "application/json" } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+    ...init,
+  });
+  if (!r.ok) {
+    let detail = `${r.status} ${r.statusText}`;
+    try {
+      const j = await r.json();
+      if (j?.detail) detail += `: ${JSON.stringify(j.detail)}`;
+    } catch {
+      // ignore
+    }
+    throw new Error(detail);
+  }
+  return (await r.json()) as T;
+}
+
+async function adminHttpJson<T>(
+  method: string,
+  path: string,
+  body?: unknown,
+  init?: RequestInit
+): Promise<T> {
+  const token = readAdminToken();
+  const headers: Record<string, string> = {
+    ...(body ? { "Content-Type": "application/json" } : {}),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...((init?.headers as Record<string, string>) || {}),
+  };
+  const r = await fetch(path, {
+    method,
+    headers,
     body: body ? JSON.stringify(body) : undefined,
     ...init,
   });
@@ -230,4 +267,171 @@ export const api = {
     httpJson<FaceStatus>("POST", `/users/${userId}/face`, { embedding }),
   deleteFace: (userId: number) =>
     httpJson<{ user_id: number; enrolled: boolean }>("DELETE", `/users/${userId}/face`),
+
+  // ---- User Security Preferences (Requirement 7) -------------------------
+  getUserSecurityPreference: (userId: number) =>
+    httpJson<{ user_id: number; show_security_analysis: boolean }>(
+      "GET",
+      `/users/${userId}/security-preference`
+    ),
+  setUserSecurityPreference: (userId: number, show: boolean) =>
+    httpJson<{ user_id: number; show_security_analysis: boolean }>(
+      "POST",
+      `/users/${userId}/security-preference`,
+      { show_security_analysis: show }
+    ),
+
+  // ---- Dedicated Admin Intelligence Platform ------------------------------
+  adminLogin: (body: { phone: string; password: string }) =>
+    adminHttpJson<{
+      token: string;
+      expires_at: string;
+      admin: { id: number; phone: string; display_name: string; role: string };
+    }>("POST", "/admin/api/auth/login", body),
+  adminMe: () =>
+    adminHttpJson<{
+      id: number;
+      phone: string;
+      display_name: string;
+      role: string;
+      last_login_at: string | null;
+    }>("GET", "/admin/api/auth/me"),
+  adminLogout: () =>
+    adminHttpJson<{ success: boolean; message: string }>("POST", "/admin/api/auth/logout"),
+  getAdminOverview: () =>
+    adminHttpJson<{
+      kpis: {
+        total_users: number;
+        active_users: number;
+        total_transactions: number;
+        completed_transactions: number;
+        failed_cancelled_transactions: number;
+        total_volume_bdt: number;
+        suspicious_transactions: number;
+        high_risk_transactions: number;
+        pending_investigations: number;
+      };
+      charts: {
+        activity_timeline: { date: string; volume_bdt: number; transactions: number; alerts: number }[];
+        risk_distribution: { name: string; count: number; color: string }[];
+      };
+    }>("GET", "/admin/api/overview"),
+  getAdminFraudAssessments: (params?: {
+    page?: number;
+    page_size?: number;
+    risk_level?: string;
+    status?: string;
+    search?: string;
+  }) => {
+    const sp = new URLSearchParams();
+    if (params?.page) sp.set("page", String(params.page));
+    if (params?.page_size) sp.set("page_size", String(params.page_size));
+    if (params?.risk_level) sp.set("risk_level", params.risk_level);
+    if (params?.status) sp.set("status", params.status);
+    if (params?.search) sp.set("search", params.search);
+    return adminHttpJson<{
+      items: any[];
+      total: number;
+      page: number;
+      page_size: number;
+      pages: number;
+    }>("GET", `/admin/api/fraud/assessments?${sp.toString()}`);
+  },
+  getAdminFraudAssessment: (id: number) =>
+    adminHttpJson<any>("GET", `/admin/api/fraud/assessments/${id}`),
+  reviewFraudAssessment: (id: number, body: { decision: string; notes?: string }) =>
+    adminHttpJson<{ success: boolean; assessment_id: number; new_status: string }>(
+      "POST",
+      `/admin/api/fraud/assessments/${id}/review`,
+      body
+    ),
+  getAdminTransactions: (params?: {
+    page?: number;
+    page_size?: number;
+    status?: string;
+    risk_level?: string;
+    search?: string;
+    min_amount?: number;
+    max_amount?: number;
+  }) => {
+    const sp = new URLSearchParams();
+    if (params?.page) sp.set("page", String(params.page));
+    if (params?.page_size) sp.set("page_size", String(params.page_size));
+    if (params?.status) sp.set("status", params.status);
+    if (params?.risk_level) sp.set("risk_level", params.risk_level);
+    if (params?.search) sp.set("search", params.search);
+    if (params?.min_amount !== undefined) sp.set("min_amount", String(params.min_amount));
+    if (params?.max_amount !== undefined) sp.set("max_amount", String(params.max_amount));
+    return adminHttpJson<{
+      items: any[];
+      total: number;
+      page: number;
+      page_size: number;
+      pages: number;
+    }>("GET", `/admin/api/transactions?${sp.toString()}`);
+  },
+  getAdminTransaction: (id: number) =>
+    adminHttpJson<any>("GET", `/admin/api/transactions/${id}`),
+  getAdminUsers: (params?: { search?: string; status_filter?: string }) => {
+    const sp = new URLSearchParams();
+    if (params?.search) sp.set("search", params.search);
+    if (params?.status_filter) sp.set("status_filter", params.status_filter);
+    return adminHttpJson<{ users: any[]; count: number }>(
+      "GET",
+      `/admin/api/users?${sp.toString()}`
+    );
+  },
+  toggleUserFlag: (userId: number, reason?: string) =>
+    adminHttpJson<{ success: boolean; user_id: number; is_flagged: boolean }>(
+      "POST",
+      `/admin/api/users/${userId}/flag`,
+      { reason }
+    ),
+  toggleUserFreeze: (userId: number, reason?: string) =>
+    adminHttpJson<{ success: boolean; user_id: number; is_frozen: boolean }>(
+      "POST",
+      `/admin/api/users/${userId}/freeze`,
+      { reason }
+    ),
+  getFraudAlerts: (params?: { status?: string; severity?: string; page?: number; page_size?: number }) => {
+    const sp = new URLSearchParams();
+    if (params?.status) sp.set("status", params.status);
+    if (params?.severity) sp.set("severity", params.severity);
+    if (params?.page) sp.set("page", String(params.page));
+    if (params?.page_size) sp.set("page_size", String(params.page_size));
+    return adminHttpJson<{ items: any[]; total: number; page: number; page_size: number; pages: number }>(
+      "GET",
+      `/admin/api/fraud/alerts?${sp.toString()}`
+    );
+  },
+  updateFraudAlert: (alertId: number, body: { status: string; notes?: string; assign_to_me?: boolean }) =>
+    adminHttpJson<{ success: boolean; alert_id: number; status: string }>(
+      "PATCH",
+      `/admin/api/fraud/alerts/${alertId}`,
+      body
+    ),
+  getAdminAuditLogs: (params?: { page?: number; page_size?: number }) => {
+    const sp = new URLSearchParams();
+    if (params?.page) sp.set("page", String(params.page));
+    if (params?.page_size) sp.set("page_size", String(params.page_size));
+    return adminHttpJson<{ items: any[]; total: number; page: number; page_size: number }>(
+      "GET",
+      `/admin/api/audit-logs?${sp.toString()}`
+    );
+  },
+  getSystemStatus: () =>
+    adminHttpJson<{
+      service: string;
+      timestamp: string;
+      database: any;
+      fraud_detection_engine: any;
+      ai_cascade_infrastructure: any;
+    }>("GET", "/admin/api/system/status"),
+  queryAdminAI: (query: string) =>
+    adminHttpJson<{
+      intent: string;
+      response: string;
+      data: any;
+      timestamp: string;
+    }>("POST", "/admin/api/ai/query", { query }),
 };

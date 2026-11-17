@@ -16,7 +16,7 @@ from fastapi.responses import JSONResponse
 
 from . import config, engine, voice_io
 from .db import SessionLocal, init_db
-from .routers import accounts, agent, insights, voice
+from .routers import accounts, admin, agent, insights, voice
 from .seed import seed
 from .services.event_bus import get_bus
 from .workers import categorizer_worker
@@ -120,6 +120,7 @@ app.include_router(agent.router)
 app.include_router(accounts.router)
 app.include_router(insights.router)
 app.include_router(voice.router)
+app.include_router(admin.router)
 
 
 @app.get("/")

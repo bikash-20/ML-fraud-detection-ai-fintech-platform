@@ -64,6 +64,10 @@ class ReviewCard(BaseModel):
     resulting_balance_bdt: Decimal
     initiator_handle: str
     initiator_phone: str
+    risk_level: Optional[str] = "low"
+    risk_score: Optional[float] = 0.0
+    security_analysis: Optional[list[str]] = None
+    requires_biometric: Optional[bool] = False
 
 
 class AgentActResponse(BaseModel):

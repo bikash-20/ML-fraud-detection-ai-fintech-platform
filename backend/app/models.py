@@ -12,8 +12,10 @@ from typing import Optional
 
 from sqlalchemy import (
     BigInteger,
+    Boolean,
     CheckConstraint,
     DateTime,
+    Float,
     ForeignKey,
     Index,
     Integer,
@@ -74,6 +76,8 @@ class User(Base):
     # webcam frames stay in the browser. NULL = not enrolled.
     face_embedding: Mapped[Optional[bytes]] = mapped_column(LargeBinary, nullable=True)
     face_enrolled_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    is_flagged: Mapped[bool] = mapped_column(default=False, server_default="0")
+    is_frozen: Mapped[bool] = mapped_column(default=False, server_default="0")
 
     account: Mapped["Account"] = relationship(back_populates="user", uselist=False)
 
@@ -267,3 +271,177 @@ class TxnTag(Base):
         Index("ix_txn_tag_slug", "tag_slug"),
         Index("ix_txn_tag_txn", "txn_id"),
     )
+
+
+# ---- Admin & Fraud Intelligence Models -------------------------------------
+
+class AdminUser(Base):
+    """Authorized administrative operators."""
+    __tablename__ = "admin_users"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    phone: Mapped[str] = mapped_column(String(32), unique=True, nullable=False)
+    display_name: Mapped[str] = mapped_column(String(64), nullable=False)
+    password_hash: Mapped[str] = mapped_column(String(256), nullable=False)
+    salt: Mapped[str] = mapped_column(String(64), nullable=False)
+    role: Mapped[str] = mapped_column(String(32), nullable=False, default="admin")
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.current_timestamp(), nullable=False
+    )
+    last_login_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
+    __table_args__ = (
+        Index("ix_admin_phone", "phone"),
+    )
+
+
+class AdminSession(Base):
+    """Bearer session tokens for authenticated admin requests."""
+    __tablename__ = "admin_sessions"
+
+    id: Mapped[int] = mapped_column(_PKType, primary_key=True)
+    admin_id: Mapped[int] = mapped_column(
+        ForeignKey("admin_users.id", ondelete="CASCADE"), nullable=False
+    )
+    token: Mapped[str] = mapped_column(String(128), unique=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.current_timestamp(), nullable=False
+    )
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    is_revoked: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+    admin: Mapped[AdminUser] = relationship("AdminUser")
+
+    __table_args__ = (
+        Index("ix_admin_session_token", "token"),
+        Index("ix_admin_session_expires", "expires_at"),
+    )
+
+
+class FraudAssessment(Base):
+    """Explainable risk assessment generated for every money movement."""
+    __tablename__ = "fraud_assessments"
+
+    id: Mapped[int] = mapped_column(_PKType, primary_key=True)
+    txn_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("transactions.id", ondelete="SET NULL"), nullable=True
+    )
+    initiator_user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    recipient_user_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    amount_bdt: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    risk_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    risk_level: Mapped[str] = mapped_column(String(16), nullable=False, default="low")  # low, medium, high
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="approved")  # approved, flagged_review, blocked, investigating, cleared
+    rules_triggered_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+    reasons_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+    features_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
+    model_version: Mapped[str] = mapped_column(String(32), nullable=False, default="hybrid_v1")
+    latency_ms: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.current_timestamp(), nullable=False
+    )
+
+    initiator: Mapped[User] = relationship("User", foreign_keys=[initiator_user_id])
+    transaction: Mapped[Optional[Transaction]] = relationship("Transaction", foreign_keys=[txn_id])
+
+    __table_args__ = (
+        Index("ix_fraud_txn_id", "txn_id"),
+        Index("ix_fraud_risk_level", "risk_level"),
+        Index("ix_fraud_risk_score", "risk_score"),
+        Index("ix_fraud_created_at", "created_at"),
+        Index("ix_fraud_user", "initiator_user_id"),
+    )
+
+
+class FraudAlert(Base):
+    """Actionable fraud alerts requiring triage or investigation."""
+    __tablename__ = "fraud_alerts"
+
+    id: Mapped[int] = mapped_column(_PKType, primary_key=True)
+    assessment_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("fraud_assessments.id", ondelete="CASCADE"), nullable=True
+    )
+    txn_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("transactions.id", ondelete="CASCADE"), nullable=True
+    )
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    alert_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    severity: Mapped[str] = mapped_column(String(16), nullable=False)  # low, medium, high, critical
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="new")  # new, investigating, resolved, false_positive
+    detection_reasons: Mapped[str] = mapped_column(Text, nullable=False)
+    investigation_notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    assigned_to_admin_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("admin_users.id"), nullable=True
+    )
+    resolved_by_admin_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("admin_users.id"), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.current_timestamp(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.current_timestamp(), onupdate=func.current_timestamp(), nullable=False
+    )
+    resolved_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
+    user: Mapped[User] = relationship("User", foreign_keys=[user_id])
+    transaction: Mapped[Optional[Transaction]] = relationship("Transaction", foreign_keys=[txn_id])
+    assessment: Mapped[Optional[FraudAssessment]] = relationship("FraudAssessment", foreign_keys=[assessment_id])
+    assigned_admin: Mapped[Optional[AdminUser]] = relationship("AdminUser", foreign_keys=[assigned_to_admin_id])
+
+    __table_args__ = (
+        Index("ix_alert_status", "status"),
+        Index("ix_alert_severity", "severity"),
+        Index("ix_alert_created_at", "created_at"),
+        Index("ix_alert_user", "user_id"),
+    )
+
+
+class SecurityAuditLog(Base):
+    """Immutable audit trail for all administrative decisions and security actions."""
+    __tablename__ = "security_audit_logs"
+
+    id: Mapped[int] = mapped_column(_PKType, primary_key=True)
+    admin_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("admin_users.id"), nullable=True
+    )
+    action: Mapped[str] = mapped_column(String(64), nullable=False)
+    target_type: Mapped[str] = mapped_column(String(32), nullable=False)  # alert, transaction, user, system
+    target_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    details_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    ip_address: Mapped[Optional[str]] = mapped_column(String(45), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.current_timestamp(), nullable=False
+    )
+
+    admin: Mapped[Optional[AdminUser]] = relationship("AdminUser")
+
+    __table_args__ = (
+        Index("ix_audit_created_at", "created_at"),
+        Index("ix_audit_action", "action"),
+        Index("ix_audit_target", "target_type", "target_id"),
+    )
+
+
+class UserSecurityPreference(Base):
+    """User-controlled security analysis display preference."""
+    __tablename__ = "user_security_preferences"
+
+    id: Mapped[int] = mapped_column(_PKType, primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False
+    )
+    show_security_analysis: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.current_timestamp(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.current_timestamp(), onupdate=func.current_timestamp(), nullable=False
+    )
+
+    user: Mapped[User] = relationship("User")

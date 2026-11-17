@@ -7,6 +7,7 @@ helper (which the test suite also uses as a reference for the threshold).
 """
 from __future__ import annotations
 
+import json
 import math
 
 import pytest
@@ -193,7 +194,12 @@ def test_enroll_rejects_nan():
     bikash = _bikash_id()
     vec = _valid_embedding()
     vec[10] = float("nan")
-    resp = client.post(f"/users/{bikash}/face", json={"embedding": vec})
+    raw_json = json.dumps({"embedding": vec})
+    resp = client.post(
+        f"/users/{bikash}/face",
+        content=raw_json,
+        headers={"Content-Type": "application/json"},
+    )
     assert resp.status_code == 422
 
 
@@ -202,7 +208,12 @@ def test_enroll_rejects_inf():
     bikash = _bikash_id()
     vec = _valid_embedding()
     vec[42] = float("inf")
-    resp = client.post(f"/users/{bikash}/face", json={"embedding": vec})
+    raw_json = json.dumps({"embedding": vec})
+    resp = client.post(
+        f"/users/{bikash}/face",
+        content=raw_json,
+        headers={"Content-Type": "application/json"},
+    )
     assert resp.status_code == 422
 
 

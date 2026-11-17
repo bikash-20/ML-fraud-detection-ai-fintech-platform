@@ -249,6 +249,25 @@ npm run dev
 
 Open `http://localhost:3000`. If the port is occupied, Next.js prints another local port. On first visit the browser will download the face-api.js and wake-word model weights (~4.4 MB + ~3 MB, served from `/public/models/`). Subsequent visits hit the browser's immutable cache.
 
+## Admin Fraud Intelligence & Monitoring Platform
+
+A dedicated, secure administrative dashboard is available at `http://localhost:3000/admin`.
+
+- **Admin Login Route**: `/admin/login`
+- **Default Credentials**:
+  - **Phone**: `01926240062`
+  - **Password**: `1234`
+  - **Admin Name**: `talukder` (Super Admin)
+
+### Platform Modules:
+1. **Overview**: Real-time KPIs (registered users, active accounts, 14-day volume timeline, risk distribution).
+2. **Fraud Intelligence**: Live explainable assessment feed, risk scores (Low, Medium, High), triggered rules, and decision review workflows.
+3. **Transaction Monitoring**: Searchable transaction ledger with risk level filtering, counterparty tracking, and audit trails.
+4. **User Management**: Directory of users, balances, transaction counts, and one-click **Security Watch** or **Account Freeze** controls.
+5. **Alerts & Investigation**: Full triage board (`new`, `investigating`, `resolved`, `false_positive`) with investigation notes and security audit logs.
+6. **System Telemetry**: Real-time API uptime, SQLite WAL stats, Fraud Engine latency (~1.5ms), and AI model cascade availability.
+7. **Admin AI Assistant**: Direct live-database-grounded AI assistant for natural language intelligence ("How many suspicious transactions today?", "Which transactions have highest risk scores?", "Latest alerts").
+
 ## How to use it
 
 Select a demo account, then use the text box, the waveform voice button, or the wake word.

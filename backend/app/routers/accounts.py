@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from .. import engine
 from ..db import session_scope
-from ..models import Account, Biller, Request, RequestStatus, SavingsGoal, Transaction, TxnKind, TxnStatus, User
+from ..models import Account, Biller, Request, RequestStatus, SavingsGoal, Transaction, TxnKind, TxnStatus, User, UserSecurityPreference
 from ..schemas import (
     BalanceOut,
     BillerOut,
@@ -493,3 +493,33 @@ def delete_face(user_id: int) -> FaceDeleteResponse:
         u.face_enrolled_at = None
         s.flush()
         return FaceDeleteResponse(user_id=u.id, enrolled=False)
+
+
+# ---- User Security Preference (Requirement 7) -------------------------------
+@router.get("/users/{user_id}/security-preference")
+def get_user_security_preference(user_id: int) -> dict:
+    with session_scope() as s:
+        u = s.get(User, user_id)
+        if not u:
+            raise HTTPException(404, "User not found")
+        pref = s.query(UserSecurityPreference).filter_by(user_id=user_id).one_or_none()
+        show = pref.show_security_analysis if pref else False
+        return {"user_id": user_id, "show_security_analysis": show}
+
+
+@router.post("/users/{user_id}/security-preference")
+def set_user_security_preference(user_id: int, payload: dict) -> dict:
+    show = bool(payload.get("show_security_analysis", False))
+    with session_scope() as s:
+        u = s.get(User, user_id)
+        if not u:
+            raise HTTPException(404, "User not found")
+        pref = s.query(UserSecurityPreference).filter_by(user_id=user_id).one_or_none()
+        if not pref:
+            pref = UserSecurityPreference(user_id=user_id, show_security_analysis=show)
+            s.add(pref)
+        else:
+            pref.show_security_analysis = show
+        s.flush()
+        return {"user_id": user_id, "show_security_analysis": pref.show_security_analysis}
+

@@ -65,6 +65,21 @@ def init_db() -> None:
     if _engine.dialect.name == "sqlite":
         _migrate_requests_idempotency_key()
         _migrate_users_face_columns()
+        _migrate_users_security_columns()
+
+
+def _migrate_users_security_columns() -> None:
+    """Add is_flagged and is_frozen columns to users table if missing."""
+    columns = {column["name"] for column in inspect(_engine).get_columns("users")}
+    with _engine.begin() as connection:
+        if "is_flagged" not in columns:
+            connection.execute(
+                text("ALTER TABLE users ADD COLUMN is_flagged BOOLEAN NOT NULL DEFAULT 0")
+            )
+        if "is_frozen" not in columns:
+            connection.execute(
+                text("ALTER TABLE users ADD COLUMN is_frozen BOOLEAN NOT NULL DEFAULT 0")
+            )
 
 
 def _migrate_requests_idempotency_key() -> None:

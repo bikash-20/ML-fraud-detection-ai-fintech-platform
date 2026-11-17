@@ -1,0 +1,150 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { api } from "@/lib/api";
+import { writeAdminToken } from "@/lib/session";
+import { Lock, Phone, ShieldCheck, ArrowRight, ShieldAlert } from "lucide-react";
+
+export default function AdminLoginPage() {
+  const router = useRouter();
+  const [phone, setPhone] = useState("01926240062");
+  const [password, setPassword] = useState("1234");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleLogin(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+
+    try {
+      const res = await api.adminLogin({ phone, password });
+      writeAdminToken(res.token);
+      router.push("/admin");
+    } catch (err) {
+      setError((err as Error).message || "Invalid administrative credentials");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Background radial glow */}
+      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-peach-500/10 rounded-full blur-3xl pointer-events-none" />
+
+      <div className="w-full max-w-md">
+        {/* Card Header */}
+        <div className="text-center mb-6">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-peach-500/15 border border-peach-500/30 text-peach-400 mb-3 shadow-glow-peach">
+            <ShieldCheck size={28} />
+          </div>
+          <h1 className="text-2xl font-bold text-cream tracking-tight">
+            Fraud Intelligence & Security
+          </h1>
+          <p className="text-xs text-lavender mt-1">
+            Dedicated Administrative Monitoring Platform
+          </p>
+        </div>
+
+        {/* Login Glass Card */}
+        <div className="glass-strong rounded-3xl p-6 sm:p-8 shadow-2xl border border-white/10 relative">
+          <div className="flex items-center justify-between pb-4 mb-5 border-b border-white/10">
+            <span className="text-xs font-semibold uppercase tracking-wider text-secondary">
+              Admin Portal Access
+            </span>
+            <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/20 font-medium">
+              Authorized Personnel
+            </span>
+          </div>
+
+          {error && (
+            <div className="mb-4 p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-200 text-xs flex items-center gap-2">
+              <ShieldAlert size={16} className="text-rose-400 flex-shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-cream mb-1.5">
+                Admin Phone Number
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-secondary">
+                  <Phone size={16} />
+                </div>
+                <input
+                  type="text"
+                  required
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="01926240062"
+                  className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-cream placeholder-white/20 text-sm focus:outline-none focus:border-peach-500/60 focus:ring-1 focus:ring-peach-500/60 transition"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-cream mb-1.5">
+                Admin Security Password
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-secondary">
+                  <Lock size={16} />
+                </div>
+                <input
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••"
+                  className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-cream placeholder-white/20 text-sm focus:outline-none focus:border-peach-500/60 focus:ring-1 focus:ring-peach-500/60 transition"
+                />
+              </div>
+            </div>
+
+            <div className="pt-2">
+              <button
+                type="submit"
+                disabled={loading}
+                className="btn-peach w-full py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {loading ? (
+                  <span>Authenticating…</span>
+                ) : (
+                  <>
+                    <span>Enter Intelligence Center</span>
+                    <ArrowRight size={16} />
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+
+          {/* Quick preset hint for verified admin talukder */}
+          <div className="mt-6 pt-4 border-t border-white/10 text-center">
+            <p className="text-[11px] text-secondary">
+              Logged in as <span className="text-peach-400 font-medium">talukder</span> (Super Admin)
+            </p>
+            <div className="mt-2 text-[10px] text-lavender/70">
+              Preset phone: <span className="font-mono text-cream">01926240062</span> • Pass: <span className="font-mono text-cream">1234</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Back to user wallet link */}
+        <div className="text-center mt-5">
+          <a
+            href="/"
+            className="text-xs text-lavender hover:text-cream transition underline underline-offset-4"
+          >
+            ← Back to User Wallet App
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}

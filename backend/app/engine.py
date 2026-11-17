@@ -255,6 +255,9 @@ def create_pending_split(
     diff = total_amount - per * len(recipients)
     # Balance check BEFORE writing any rows so we never create an orphaned
     # Split record when the initiator can't cover the amount.
+    init_user = session.get(User, initiator_user_id)
+    if init_user and getattr(init_user, "is_frozen", False):
+        raise EngineError("Account is temporarily frozen due to security investigation.")
     init_acct = (
         session.query(Account).filter_by(user_id=initiator_user_id).one()
     )
@@ -354,7 +357,10 @@ def _create_pending(
         raise EngineError(f"unknown recipient: {recipient_handle}")
     if recipient.id == initiator_user_id:
         raise SelfTransfer("can't send to yourself")
-    init_acct = _get_account(session, _get_user(session, initiator_user_id))
+    init_user = _get_user(session, initiator_user_id)
+    if getattr(init_user, "is_frozen", False):
+        raise EngineError("Account is temporarily frozen due to security investigation.")
+    init_acct = _get_account(session, init_user)
     if init_acct.balance_bdt < amount:
         raise InsufficientFunds(init_acct.balance_bdt, amount)
     existing = _find_idempotent_txn(session, initiator_user_id, idempotency_key)

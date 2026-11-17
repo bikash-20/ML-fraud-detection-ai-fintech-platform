@@ -56,6 +56,7 @@ export function SettingsModal({
   const [ok, setOk] = useState<string | null>(null);
   const [faceStatus, setFaceStatus] = useState<FaceStatus | null>(null);
   const [enrollOpen, setEnrollOpen] = useState(false);
+  const [showSecurityAnalysis, setShowSecurityAnalysis] = useState(false);
 
   // Local form state — only commit on Save.
   const [ollamaUrl, setOllamaUrl] = useState("");
@@ -77,12 +78,16 @@ export function SettingsModal({
     const facePromise = userId !== null
       ? api.getFaceStatus(userId).catch(() => null)
       : Promise.resolve(null);
-    Promise.all([api.getSettings(), api.getHealth(), facePromise])
-      .then(([settings, health, face]) => {
+    const secPromise = userId !== null
+      ? api.getUserSecurityPreference(userId).catch(() => null)
+      : Promise.resolve(null);
+    Promise.all([api.getSettings(), api.getHealth(), facePromise, secPromise])
+      .then(([settings, health, face, secPref]) => {
         const st = settings as Settings;
         setS(st);
         setH(health);
         setFaceStatus(face);
+        if (secPref) setShowSecurityAnalysis(secPref.show_security_analysis);
         setOllamaUrl(st.ollama_url);
         setCascade((st.llm_cascade || []).join(", "));
         setOrUrl(st.openrouter_url);
@@ -118,6 +123,9 @@ export function SettingsModal({
       if (elevenKey.trim()) patch["elevenlabs_api_key"] = elevenKey.trim();
       const next = await api.patchSettings(patch);
       setS(next as Settings);
+      if (userId !== null) {
+        await api.setUserSecurityPreference(userId, showSecurityAnalysis);
+      }
       const health = await api.getHealth();
       setH(health);
       setOk("Saved.");
@@ -385,6 +393,28 @@ export function SettingsModal({
                 </p>
               </>
             )}
+          </Section>
+
+          <Section title="Security Insights">
+            <div className="flex items-center justify-between p-3.5 rounded-xl bg-white/5 border border-white/10">
+              <div className="pr-4">
+                <div className="text-sm font-medium text-cream">
+                  Show detailed transaction security analysis
+                </div>
+                <div className="text-[11px] text-secondary mt-0.5">
+                  Display explainable risk verification timelines during transaction confirmation. Backend fraud detection remains active at all times.
+                </div>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                <input
+                  type="checkbox"
+                  checked={showSecurityAnalysis}
+                  onChange={(e) => setShowSecurityAnalysis(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-peach-500"></div>
+              </label>
+            </div>
           </Section>
 
           <div className="flex items-center justify-end gap-2 pt-2">

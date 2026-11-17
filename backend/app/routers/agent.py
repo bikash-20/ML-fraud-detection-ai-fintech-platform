@@ -6,10 +6,12 @@ Safety pattern (PRD §4) lives here as the orchestration:
 """
 from __future__ import annotations
 
+import json
 from decimal import Decimal
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
 from .. import engine, llm, resolver
@@ -53,10 +55,49 @@ def _review_card_for_send(txn: Transaction, session: Session) -> ReviewCard:
     resulting = init_acct.balance_bdt  # unchanged while pending
     recipient = None
     phone = None
+    recipient_user_id = None
     if txn.to_account_id:
-        r_user = session.query(User).join(Account).filter(Account.id == txn.to_account_id).one()
-        recipient = r_user.handle
-        phone = r_user.phone
+        r_user = session.query(User).join(Account).filter(Account.id == txn.to_account_id).one_or_none()
+        if r_user:
+            recipient = r_user.handle
+            phone = r_user.phone
+            recipient_user_id = r_user.id
+
+    # Attach or perform fraud assessment
+    from ..models import FraudAssessment
+    from ..services.fraud_engine import FraudEngine
+
+    assessment = (
+        session.query(FraudAssessment)
+        .filter_by(txn_id=txn.id)
+        .order_by(desc(FraudAssessment.id))
+        .first()
+    ) if txn.id else None
+
+    if assessment is None and txn.id:
+        res = FraudEngine.evaluate(
+            session,
+            initiator_user_id=init.id,
+            recipient_user_id=recipient_user_id,
+            amount_bdt=txn.amount_bdt,
+            txn_id=txn.id,
+            persist=True,
+        )
+        risk_level = res.risk_level
+        risk_score = res.risk_score
+        security_analysis = res.reasons
+        requires_biometric = res.requires_biometric
+    elif assessment:
+        risk_level = assessment.risk_level
+        risk_score = assessment.risk_score
+        security_analysis = json.loads(assessment.reasons_json) if assessment.reasons_json else []
+        requires_biometric = (risk_level in ("medium", "high"))
+    else:
+        risk_level = "low"
+        risk_score = 0.0
+        security_analysis = ["Normal transaction parameters verified."]
+        requires_biometric = False
+
     return ReviewCard(
         kind="send",
         amount_bdt=txn.amount_bdt,
@@ -66,6 +107,10 @@ def _review_card_for_send(txn: Transaction, session: Session) -> ReviewCard:
         resulting_balance_bdt=resulting,  # post-debit will be lower; we phrase accurately
         initiator_handle=init.handle,
         initiator_phone=init.phone,
+        risk_level=risk_level,
+        risk_score=risk_score,
+        security_analysis=security_analysis,
+        requires_biometric=requires_biometric,
     )
 
 
