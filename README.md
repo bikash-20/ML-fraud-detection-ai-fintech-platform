@@ -78,7 +78,7 @@ FastAPI Application Cluster
    │      ├── Atomic debit/credit mutations (ACID)
    │      ├── Idempotency enforcement & replay protection
    │      └── Pending TTL sweeper & account freeze enforcement
-   └── SQLAlchemy + SQLite / MySQL Ledger State
+   └── SQLAlchemy + SQLite / PostgreSQL Ledger State
 ```
 
 ### Senior Architectural Separation: Chat vs. Database Operations

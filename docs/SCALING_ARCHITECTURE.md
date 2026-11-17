@@ -59,11 +59,11 @@ flowchart TD
         Sweeper["Pending Expiry Sweeper"]
     end
 
-    subgraph DataTier["6. State & Data Tier"]
+    subgraph DataTier["6. State & Data Tier (PostgreSQL Core)"]
         RDS_Proxy["Amazon RDS Proxy (Connection Pooling)"]
-        MySQL_Primary[("Amazon RDS MySQL (Primary - Multi-AZ Write)")]
-        MySQL_Replica1[("RDS Read Replica 1")]
-        MySQL_Replica2[("RDS Read Replica 2")]
+        Postgres_Primary[("Amazon RDS PostgreSQL (Primary - Multi-AZ Write)")]
+        Postgres_Replica1[("RDS PostgreSQL Read Replica 1")]
+        Postgres_Replica2[("RDS PostgreSQL Read Replica 2")]
         RedisCluster[("ElastiCache Redis Cluster (Session & Cache)")]
         SQS["Amazon SQS FIFO (Event & Audit Queue)"]
     end
@@ -94,9 +94,9 @@ flowchart TD
     TxnEngine --> IdemGuard
     IdemGuard --> RedisCluster
     TxnEngine --> RDS_Proxy
-    RDS_Proxy --> MySQL_Primary
-    MySQL_Primary -.->|Async Replication| MySQL_Replica1 & MySQL_Replica2
-    API1 & API2 & API3 -->|Balance & History Queries| MySQL_Replica1 & MySQL_Replica2
+    RDS_Proxy --> Postgres_Primary
+    Postgres_Primary -.->|Streaming Replication| Postgres_Replica1 & Postgres_Replica2
+    API1 & API2 & API3 -->|Balance & History Queries| Postgres_Replica1 & Postgres_Replica2
 
     %% Async jobs & audit
     TxnEngine -->|Transaction Events| SQS
@@ -127,7 +127,7 @@ flowchart LR
     end
 
     subgraph Data["Database"]
-        RenderDB[("Managed MySQL / PostgreSQL")]
+        RenderDB[("Managed PostgreSQL (Supabase / Render)")]
     end
 
     subgraph AI["AI Tier"]
@@ -143,7 +143,7 @@ flowchart LR
 
 - **Frontend**: Deployed on **Vercel** with automatic global CDN caching and edge headers.
 - **Backend**: Single or dual-instance **Render Web Service** running FastAPI with Uvicorn.
-- **Database**: Single **Managed MySQL / PostgreSQL** instance on Render or PlanetScale with daily automated backups.
+- **Database**: Single **Managed PostgreSQL** instance on Render, Supabase, or AWS RDS with automated daily backups.
 - **AI Processing**: Cloud API fallback (Grok / OpenRouter) or local single-worker Ollama instance; Cloud voice (ElevenLabs / Edge-TTS).
 - **Bottlenecks at this tier**: Render web service CPU limits on audio transcoding; single DB connection saturation past 1,000 active sessions.
 
@@ -170,7 +170,7 @@ flowchart TD
     end
 
     subgraph DB["Database Tier"]
-        RDS_Main[("Amazon RDS MySQL (Multi-AZ)")]
+        RDS_Main[("Amazon RDS PostgreSQL (Multi-AZ)")]
     end
 
     subgraph Workers["Background Tasks"]
@@ -188,7 +188,7 @@ flowchart TD
 ```
 
 - **Compute**: Migration to **AWS ECS Fargate** with multi-AZ container deployments (2–4 instances minimum).
-- **Database**: **Amazon RDS MySQL Multi-AZ** deployment with automated automated snapshots and Point-in-Time Recovery (PITR).
+- **Database**: **Amazon RDS PostgreSQL Multi-AZ** deployment with automated daily snapshots, WAL archiving, and Point-in-Time Recovery (PITR).
 - **Caching & Locks**: **Amazon ElastiCache Redis** for distributed idempotency keys, rate limiting, and balance caching.
 - **Background Jobs**: **AWS SQS** queue for asynchronous transaction categorization, email/SMS receipts, and event publishing.
 
@@ -209,10 +209,10 @@ flowchart TD
         API["FastAPI Cluster (Auto-scaling 4 to 16 tasks)"]
     end
 
-    subgraph DBCluster["Database Tier"]
-        RDS_W[("RDS MySQL Primary (Writes)")]
-        RDS_R1[("RDS Read Replica 1 (Queries)")]
-        RDS_R2[("RDS Read Replica 2 (Analytics)")]
+    subgraph DBCluster["Database Tier (PostgreSQL Primary & Replicas)"]
+        RDS_W[("RDS PostgreSQL Primary (Writes)")]
+        RDS_R1[("RDS PostgreSQL Read Replica 1 (Queries & History)")]
+        RDS_R2[("RDS PostgreSQL Read Replica 2 (Analytics & Intelligence)")]
     end
 
     subgraph GPUCluster["Dedicated GPU Inference Cluster"]
@@ -225,14 +225,14 @@ flowchart TD
     WAF --> ALB --> API
     API -->|Writes / Transfers| RDS_W
     API -->|Balance & History Reads| RDS_R1 & RDS_R2
-    RDS_W -.->|Replication| RDS_R1 & RDS_R2
+    RDS_W -.->|Streaming Replication| RDS_R1 & RDS_R2
     API -->|Inference Requests| AIGateway
     AIGateway --> GPU1 & GPU2 & GPU3
 ```
 
 - **Read/Write DB Splitting**:
-  - Primary RDS instance handles strict write transactions (`BEGIN ... COMMIT`).
-  - Read replicas handle read-heavy queries (`GET /history`, `GET /users/{id}/requests`, balance timeline, and analytics).
+  - Primary RDS PostgreSQL instance handles strict write transactions (`BEGIN ... COMMIT`) with row-level locks (`SELECT FOR UPDATE`).
+  - Read replicas handle read-heavy queries (`GET /history`, `GET /users/{id}/requests`, balance timeline, and analytics rollups).
 - **Dedicated GPU Worker Fleet**:
   - Transition from local/external Ollama to dedicated **EC2 G5 (NVIDIA A10G)** or **G6 (NVIDIA L4)** GPU instances.
   - Serving LLM inference with **vLLM** for continuous batching and PagedAttention (10x throughput over Ollama).
@@ -267,9 +267,9 @@ flowchart TD
             TTSPool["Voice Synthesis Cluster"]
         end
 
-        subgraph DBEngine["Aurora Serverless v2 / Multi-AZ MySQL"]
+        subgraph DBEngine["Amazon Aurora PostgreSQL Serverless v2"]
             RDS_Proxy["RDS Proxy Connection Pooler"]
-            AuroraPrimary[("Aurora Primary (Multi-AZ Master)")]
+            AuroraPrimary[("Aurora PostgreSQL Primary (Multi-AZ Master)")]
             AuroraReader1[("Aurora Auto-Scaling Reader 1")]
             AuroraReader2[("Aurora Auto-Scaling Reader 2")]
         end
@@ -292,7 +292,7 @@ flowchart TD
     AIEngine --> LLMPool & STTPool & TTSPool
 ```
 
-- **Database**: **Amazon Aurora Serverless v2** with **RDS Proxy**, auto-scaling compute up to 128 ACUs per instance and multi-AZ failover in < 15 seconds.
+- **Database**: **Amazon Aurora PostgreSQL Serverless v2** with **RDS Proxy**, auto-scaling compute up to 128 ACUs per instance and multi-AZ failover in < 15 seconds.
 - **Event-Driven Ledger**: Financial ledger events are published to **Amazon MSK (Kafka)** or SQS FIFO for asynchronous reconciliation, risk scoring, audit logging, and push notifications.
 - **Dynamic GPU Auto-Scaling**: LLM and speech worker pools scale horizontally based on queue depth and GPU memory utilization metrics.
 
@@ -405,13 +405,27 @@ vllm serve Qwen/Qwen2.5-14B-Instruct \
 
 ---
 
-## 5. Technology Stack Mapping by Scale
+## 5. Strategic Database Architecture: Why PostgreSQL Over MySQL
+
+For an AI-powered financial ledger handling complex analytics, real-time fraud intelligence, and millions of concurrent transactions, **PostgreSQL** is our definitive target database engine:
+
+| FinTech Requirement | PostgreSQL (Target Production Strategy) | MySQL (Legacy Baseline) |
+| :--- | :--- | :--- |
+| **Complex Financial Analytics** | Advanced Window Functions, recursive CTEs, and partial indexes allow rolling 30-day category spend, velocity baselines, and health scores to compute in sub-15ms. | Slower execution on multi-level CTEs and lacks partial index filtering. |
+| **Explainable Fraud Metadata** | Native **JSONB** with **GIN indexing** enables instant sub-millisecond filtering across thousands of dynamic fraud detection rule triggers and reasons. | Basic JSON type without native GIN indexing; requires costly virtual generated columns. |
+| **High-Concurrency Row Locking** | `SELECT ... FOR UPDATE NOWAIT` and `SKIP LOCKED` allow seamless atomic debit/credit mutations without blocking unrelated transactions. | InnoDB next-key / gap locking frequently causes deadlocks under concurrent bursts. |
+| **High-Volume Ledger Partitioning** | Declarative range partitioning on `completed_at` keeps active indices small, fast, and cached in RAM while historical data is easily archived. | Partition pruning is less efficient on large multi-column composite keys. |
+| **AI & Vector Extensibility** | Direct integration with **`pgvector`** enables storing and searching transaction embeddings, behavioral clustering, and biometric vector verification in-database. | Requires external vector databases (Pinecone, Milvus), adding operational complexity. |
+
+---
+
+## 6. Technology Stack Mapping by Scale
 
 | Component | MVP (100 – 1K) | Mid Scale (10K) | Enterprise (1M+) |
 | :--- | :--- | :--- | :--- |
 | **Frontend Hosting** | Vercel | Vercel / AWS CloudFront | CloudFront + S3 Origin |
 | **API Backend** | Render Web Service | AWS ECS Fargate | AWS ECS / EKS (Auto-scaling) |
-| **Database** | Render MySQL | Amazon RDS MySQL Multi-AZ | Aurora MySQL + RDS Proxy |
+| **Database** | Managed PostgreSQL (Supabase / Render) | Amazon RDS PostgreSQL Multi-AZ | Aurora PostgreSQL Serverless v2 + RDS Proxy |
 | **Caching & Locking** | In-Memory Python Dict | ElastiCache Redis (Single node) | ElastiCache Redis Cluster (Multi-AZ) |
 | **Local LLM Inference** | Ollama (Qwen 2.5 7B) | EC2 G5.xlarge vLLM (Qwen 2.5 14B) | Auto-scaling GPU Cluster (Qwen 2.5 14B Fleet) |
 | **STT Engine** | Local Faster-Whisper | Dedicated Worker (T4/L4) | Triton Inference Server (GPU Batch) |
@@ -422,11 +436,11 @@ vllm serve Qwen/Qwen2.5-14B-Instruct \
 
 ---
 
-## 6. The 5 Core Engineering Priorities for FinTech Scale
+## 7. The 5 Core Engineering Priorities for FinTech Scale
 
 ### 1. Completely Stateless Backend
 - Keep zero session state, user tokens, or pending transaction memory in FastAPI process RAM.
-- All state must reside in Redis (ephemeral/locks) or MySQL (authoritative ledger). Any container can be killed or spun up instantly.
+- All state must reside in Redis (ephemeral/locks) or PostgreSQL (authoritative ledger). Any container can be killed or spun up instantly.
 
 ### 2. Absolute Database Consistency & ACID Idempotency
 - Every financial mutation must run inside an explicit database transaction (`BEGIN ... COMMIT`) with row-level locks (`SELECT FOR UPDATE`).
@@ -451,7 +465,7 @@ vllm serve Qwen/Qwen2.5-14B-Instruct \
 
 ---
 
-## 7. Scaling AI Fraud Detection & Financial Intelligence
+## 8. Scaling AI Fraud Detection & Financial Intelligence
 
 As transaction volume scales from 100 to 1,000,000+ users, the intelligence layers require distinct architectural strategies to maintain sub-millisecond evaluation latency and zero impact on ledger throughput.
 
