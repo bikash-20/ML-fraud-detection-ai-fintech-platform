@@ -248,6 +248,14 @@ def agent_act(req: AgentActRequest) -> AgentActResponse:
         if action == "budget_status":
             res = assistant_db.get_budget_status(s, req.user_id, intent_dict.get("festival"))
             return AgentActResponse(text=res["text"], action="budget_status", data=res)
+        if action == "financial_insights":
+            from ..services import financial_intelligence
+            res = financial_intelligence.calculate_financial_insights(s, req.user_id)
+            return AgentActResponse(text=res["text"], action="financial_insights", data=res)
+        if action == "financial_literacy":
+            from ..services import financial_intelligence
+            res = financial_intelligence.get_financial_literacy_guide(intent_dict.get("topic"))
+            return AgentActResponse(text=res["text"], action="financial_literacy", data=res)
         if action == "set_budget":
             amt = intent_dict.get("amount")
             if amt and float(amt) > 0:
@@ -664,6 +672,14 @@ def agent_chat(req: AgentChatRequest) -> AgentChatResponse:
         if fallback_intent["action"] == "budget_status":
             res = assistant_db.get_budget_status(s, req.user_id, fallback_intent.get("festival"))
             return AgentChatResponse(text=res["text"], action="budget_status")
+        if fallback_intent["action"] == "financial_insights":
+            from ..services import financial_intelligence
+            res = financial_intelligence.calculate_financial_insights(s, req.user_id)
+            return AgentChatResponse(text=res["text"], action="financial_insights")
+        if fallback_intent["action"] == "financial_literacy":
+            from ..services import financial_intelligence
+            res = financial_intelligence.get_financial_literacy_guide(fallback_intent.get("topic"))
+            return AgentChatResponse(text=res["text"], action="financial_literacy")
         if fallback_intent["action"] == "set_budget":
             amt = fallback_intent.get("amount")
             if amt and float(amt) > 0:

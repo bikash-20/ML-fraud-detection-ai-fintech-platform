@@ -417,6 +417,41 @@ _BUDGET_STATUS_PATTERNS = [
     r"budget info",
 ]
 
+_FINANCIAL_INSIGHTS_PATTERNS = [
+    r"budget recommendation",
+    r"budget recommendations",
+    r"budget advice",
+    r"spending habit",
+    r"spending habits",
+    r"financial health",
+    r"financial insight",
+    r"financial insights",
+    r"how is my financial health",
+    r"analyze my spending",
+    r"spending analysis",
+    r"বাজেট পরামর্শ",
+    r"টাকা জমানোর পরামর্শ",
+    r"আর্থিক স্বাস্থ্য",
+]
+
+_FINANCIAL_LITERACY_PATTERNS = [
+    r"emergency fund",
+    r"what is an emergency fund",
+    r"50.?30.?20",
+    r"50 30 20 rule",
+    r"financial literacy",
+    r"how does fraud detection work",
+    r"fraud protection",
+    r"scam protection",
+    r"prevent fraud",
+    r"double entry",
+    r"ledger integrity",
+    r"জরুরি ফান্ড",
+    r"জরুরি তহবিল",
+    r"বাজেট করার নিয়ম",
+    r"প্রতারণা থেকে বাঁচার উপায়",
+]
+
 _BALANCE_TOKENS = {
     "balance", "bal", "মিউ", "money left", "how much do i have",
     "what's my balance", "what is my balance", "how much money do i have",
@@ -567,6 +602,12 @@ def _classify_action(text: str) -> str:
     for pat in _BUDGET_STATUS_PATTERNS:
         if re.search(pat, t):
             return "budget_status"
+    for pat in _FINANCIAL_INSIGHTS_PATTERNS:
+        if re.search(pat, t):
+            return "financial_insights"
+    for pat in _FINANCIAL_LITERACY_PATTERNS:
+        if re.search(pat, t):
+            return "financial_literacy"
 
     # greetings (very short, no numbers)
     if len(t.split()) <= 6:
@@ -625,6 +666,22 @@ def _regex_intent(text: str, known_handles: list[str], known_billers: list[str])
     if action == "budget_status":
         fest, _ = _extract_budget_info(text)
         return {"action": "budget_status", "festival": fest if fest != "general" else None, "amount": None, "recipient": None, "biller": None, "split_recipients": []}
+    if action == "financial_insights":
+        return {"action": "financial_insights", "amount": None, "recipient": None, "biller": None, "split_recipients": []}
+    if action == "financial_literacy":
+        topic = None
+        t = _normalize(text)
+        if "emergency" in t or "fund" in t or "জরুরি" in t:
+            topic = "emergency_fund"
+        elif "50" in t or "rule" in t:
+            topic = "50_30_20"
+        elif "fraud" in t or "scam" in t or "প্রতারণা" in t or "protection" in t:
+            topic = "fraud_prevention"
+        elif "double" in t or "entry" in t or "ledger" in t:
+            topic = "double_entry"
+        elif "festival" in t or "eid" in t or "puja" in t:
+            topic = "festival_savings"
+        return {"action": "financial_literacy", "topic": topic, "amount": None, "recipient": None, "biller": None, "split_recipients": []}
 
     if action == "send" or action == "request":
         return {

@@ -175,8 +175,29 @@ export function ChatBar({
         className="flex-1 min-h-0 overflow-y-auto pr-1 flex flex-col gap-2"
       >
         {messages.length === 0 ? (
-          <div className="text-xs text-secondary text-center py-8">
-            Say hi, ask for your balance, or run a money command.
+          <div className="flex flex-col items-center justify-center py-6 text-center">
+            <div className="text-xs text-secondary mb-3">
+              Ask the Financial Assistant, get budget recommendations, or run money commands:
+            </div>
+            <div className="flex flex-wrap justify-center gap-1.5 max-w-md">
+              {[
+                "💡 Budget recommendations",
+                "📊 Analyze my spending habits",
+                "🛡️ How does fraud detection protect me?",
+                "📚 Explain the 50/30/20 rule",
+                "💰 What is an emergency fund?",
+              ].map((chip) => (
+                <button
+                  key={chip}
+                  type="button"
+                  onClick={() => sendText(chip.replace(/^[^\s]+\s/, ""))}
+                  disabled={busy || disabled}
+                  className="text-[11px] px-2.5 py-1 rounded-full bg-white/5 hover:bg-peach-500/20 text-cream/80 hover:text-white border border-white/10 hover:border-peach-500/30 transition-all text-left"
+                >
+                  {chip}
+                </button>
+              ))}
+            </div>
           </div>
         ) : (
           messages.map((m) => (

@@ -15,6 +15,7 @@ import { VoiceButton } from "@/components/VoiceButton";
 import { ChatBar } from "@/components/ChatBar";
 import { SplitForm } from "@/components/SplitForm";
 import { SavingsGoals } from "@/components/SavingsGoals";
+import { FinancialIntelligenceCard } from "@/components/FinancialIntelligenceCard";
 import { AnimatePresence, motion } from "framer-motion";
 import { HandCoins, LogOut, Settings as SettingsIcon } from "lucide-react";
 import { speakText, subscribeSpeaking } from "@/lib/speech";
@@ -559,6 +560,20 @@ export default function DashboardPage() {
           }
         />
       </motion.div>
+
+      {/* New Intelligence Layer: Financial Intelligence, Health Scoring & Literacy */}
+      {activeId !== null && (
+        <motion.div
+          className="mb-4"
+          variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0 } }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+        >
+          <FinancialIntelligenceCard
+            userId={activeId}
+            onAskAI={(prompt) => sendIntent(prompt)}
+          />
+        </motion.div>
+      )}
 
       <motion.div
         className="mb-4"

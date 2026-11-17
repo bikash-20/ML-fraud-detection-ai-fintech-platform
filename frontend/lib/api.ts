@@ -40,6 +40,49 @@ export type SavingsGoal = {
   target_date: string | null;
 };
 
+// ---- New Intelligence Layer Types ------------------------------------------
+export type FinancialRecommendation = {
+  id: string;
+  title: string;
+  category: string;
+  priority: "high" | "medium" | "low";
+  description: string;
+  action_label: string;
+};
+
+export type CategorySpendBreakdown = {
+  category: string;
+  amount_bdt: string;
+  percentage: number;
+  amount_raw: number;
+};
+
+export type FinancialIntelligence = {
+  user_id: number;
+  health_score: number;
+  health_rating: string;
+  health_color: string;
+  current_balance_bdt: string;
+  total_spent_30d_bdt: string;
+  total_spent_7d_bdt: string;
+  count_30d: number;
+  count_7d: number;
+  weekly_velocity_pct: number;
+  category_breakdown: CategorySpendBreakdown[];
+  recommendations: FinancialRecommendation[];
+  text: string;
+};
+
+export type FinancialLiteracyTopic = {
+  slug: string;
+  title: string;
+  summary: string;
+  bangla_summary: string;
+  details?: string;
+  key_takeaways?: string[];
+  text?: string;
+};
+
 // ---- Face ID ---------------------------------------------------------------
 // 128-dim float vector produced by face-api.js. Stored on the server as an
 // opaque JSON blob — the API never echoes it back, so the frontend only
@@ -279,6 +322,24 @@ export const api = {
       "POST",
       `/users/${userId}/security-preference`,
       { show_security_analysis: show }
+    ),
+
+  // ---- New Intelligence Layer: Financial Intelligence & Literacy -----------
+  getFinancialIntelligence: (userId: number) =>
+    httpJson<FinancialIntelligence>("GET", `/users/${userId}/financial-intelligence`),
+  getFinancialLiteracy: (userId: number, topic?: string) =>
+    httpJson<{
+      topics?: FinancialLiteracyTopic[];
+      topic?: string;
+      title?: string;
+      summary?: string;
+      details?: string;
+      bangla_summary?: string;
+      key_takeaways?: string[];
+      text: string;
+    }>(
+      "GET",
+      `/users/${userId}/financial-literacy${topic ? `?topic=${encodeURIComponent(topic)}` : ""}`
     ),
 
   // ---- Dedicated Admin Intelligence Platform ------------------------------

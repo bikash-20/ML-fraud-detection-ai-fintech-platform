@@ -236,3 +236,25 @@ def tags_for_history(user_id: int, limit: int = 50) -> dict:
         ids = [r[0] for r in recent]
         tags = _load_tags_for_txn(s, ids)
         return {"txn_ids": ids, "tags": tags}
+
+
+# ---- New Intelligence Layer: Financial Intelligence & Literacy Endpoints ----
+@router.get("/users/{user_id}/financial-intelligence")
+def get_user_financial_intelligence(user_id: int) -> dict:
+    """Returns real-time financial health score, 30-day category breakdown,
+    velocity metrics, and personalized budget recommendations.
+    """
+    from ..services.financial_intelligence import calculate_financial_insights
+    with session_scope() as s:
+        try:
+            return calculate_financial_insights(s, user_id)
+        except ValueError as e:
+            raise HTTPException(404, str(e))
+
+
+@router.get("/users/{user_id}/financial-literacy")
+def get_user_financial_literacy(user_id: int, topic: str | None = None) -> dict:
+    """Returns curated financial literacy guides and best practices."""
+    from ..services.financial_intelligence import get_financial_literacy_guide
+    return get_financial_literacy_guide(topic)
+
