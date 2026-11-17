@@ -498,11 +498,14 @@ export const api = {
       fraud_detection_engine: any;
       ai_cascade_infrastructure: any;
     }>("GET", "/admin/api/system/status"),
-  queryAdminAI: (query: string) =>
+  queryAdminAI: (
+    query: string,
+    history?: { sender: "admin" | "ai"; text: string }[]
+  ) =>
     adminHttpJson<{
       intent: string;
       response: string;
       data: any;
       timestamp: string;
-    }>("POST", "/admin/api/ai/query", { query }),
+    }>("POST", "/admin/api/ai/query", { query, history }),
 };

@@ -73,7 +73,8 @@ class AdminUserActionRequest(BaseModel):
 
 
 class AdminAIQueryRequest(BaseModel):
-    query: str = Field(..., min_length=2, max_length=500)
+    query: str = Field(..., min_length=1, max_length=1000)
+    history: Optional[List[Dict[str, Any]]] = None
 
 
 # ---- Auth Endpoints ---------------------------------------------------------
@@ -899,4 +900,4 @@ def admin_ai_query(
     session: Session = Depends(get_session),
 ) -> dict:
     """Live-database-grounded AI intelligence for administrators."""
-    return AdminAIAssistant.answer_admin_query(session, req.query)
+    return AdminAIAssistant.answer_admin_query(session, req.query, history=req.history)

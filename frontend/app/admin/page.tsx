@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
+import { speakText } from "@/lib/speech";
 import {
   Activity,
   AlertOctagon,
@@ -19,7 +20,10 @@ import {
   Filter,
   Flame,
   Layers,
+  Loader2,
   MessageSquare,
+  Mic,
+  MicOff,
   RefreshCw,
   Search,
   Send,
@@ -30,6 +34,8 @@ import {
   UserCheck,
   Users,
   UserX,
+  Volume2,
+  VolumeX,
   X,
 } from "lucide-react";
 import {
@@ -94,19 +100,35 @@ export default function AdminDashboardPage() {
   // Section F: System Status
   const [systemStatus, setSystemStatus] = useState<any>(null);
 
-  // AI Assistant Drawer
+  // AI Assistant Drawer & Voice Control
   const [aiDrawerOpen, setAiDrawerOpen] = useState(false);
   const [aiQuery, setAiQuery] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
+  const [isVoiceMuted, setIsVoiceMuted] = useState(false);
+  const [isRecordingVoice, setIsRecordingVoice] = useState(false);
+  const [isTranscribingVoice, setIsTranscribingVoice] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
   const [aiChatHistory, setAiChatHistory] = useState<
     { sender: "admin" | "ai"; text: string; data?: any; time: string }[]
   >([
     {
       sender: "ai",
-      text: "Hello Talukder! I am your live Fraud Intelligence AI Assistant. I can analyze suspicious activities, explain risk scores, inspect transaction velocities, and monitor system health directly from the MySQL/SQLite database. What would you like to investigate?",
+      text: "Hello Boss! I am your live Fraud Intelligence AI Assistant. I can analyze suspicious activities, check recent system activity, explain risk scores, and monitor health directly from the live database. What would you like to investigate?",
       time: "Just now",
     },
   ]);
+
+  // Audio stream cleanup on unmount
+  useEffect(() => {
+    return () => {
+      try {
+        mediaRecorderRef.current?.stop();
+      } catch {}
+      mediaStreamRef.current?.getTracks().forEach((t) => t.stop());
+    };
+  }, []);
 
   // Load initial data for the current tab
   useEffect(() => {
@@ -264,8 +286,68 @@ export default function AdminDashboardPage() {
     }
   }
 
-  // Ask Admin AI
-  async function handleSendAiQuery(customText?: string) {
+  // Admin Voice Input Handlers
+  async function startVoiceRecording() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          channelCount: 1,
+          echoCancellation: true,
+          noiseSuppression: true,
+        },
+      });
+      mediaStreamRef.current = stream;
+      const mimeType = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"].find(
+        (candidate) => MediaRecorder.isTypeSupported(candidate)
+      );
+      const mr = mimeType
+        ? new MediaRecorder(stream, { mimeType })
+        : new MediaRecorder(stream);
+      audioChunksRef.current = [];
+      mr.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+      mr.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        mediaStreamRef.current = null;
+        const blob = new Blob(audioChunksRef.current, {
+          type: mr.mimeType || "audio/webm",
+        });
+        if (blob.size === 0) return;
+        setIsTranscribingVoice(true);
+        try {
+          const text = await api.transcribe(blob);
+          if (text && text.trim()) {
+            // Immediate verbal acknowledgment when voice command received
+            if (!isVoiceMuted) {
+              speakText("Let me check, Boss...");
+            }
+            await handleSendAiQuery(text.trim(), true);
+          }
+        } catch (e) {
+          console.error("Voice transcription failed:", e);
+        } finally {
+          setIsTranscribingVoice(false);
+        }
+      };
+      mr.start();
+      mediaRecorderRef.current = mr;
+      setIsRecordingVoice(true);
+    } catch (e) {
+      alert(`Microphone access unavailable: ${(e as Error).message}`);
+    }
+  }
+
+  function stopVoiceRecording() {
+    const mr = mediaRecorderRef.current;
+    if (mr && mr.state !== "inactive") {
+      mr.stop();
+    }
+    setIsRecordingVoice(false);
+  }
+
+  // Ask Admin AI with multi-turn history & word-by-word streaming
+  async function handleSendAiQuery(customText?: string, fromVoice = false) {
     const q = customText || aiQuery;
     if (!q.trim()) return;
 
@@ -275,7 +357,13 @@ export default function AdminDashboardPage() {
     setAiLoading(true);
 
     try {
-      const res = await api.queryAdminAI(q);
+      // Build conversation history payload from previous turns
+      const historyPayload = aiChatHistory
+        .filter((m) => m.text && (m.sender === "admin" || m.sender === "ai"))
+        .slice(-8)
+        .map((m) => ({ sender: m.sender, text: m.text }));
+
+      const res = await api.queryAdminAI(q, historyPayload);
       const fullText = res.response;
       setAiLoading(false);
 
@@ -289,6 +377,11 @@ export default function AdminDashboardPage() {
           time: new Date().toLocaleTimeString(),
         },
       ]);
+
+      // If voice enabled, speak the full synthesized response aloud via TTS
+      if (!isVoiceMuted) {
+        speakText(fullText);
+      }
 
       // Reveal words one by one for natural conversational streaming
       const words = fullText.split(" ");
@@ -304,18 +397,22 @@ export default function AdminDashboardPage() {
           }
           return next;
         });
-        await new Promise((r) => setTimeout(r, 25));
+        await new Promise((r) => setTimeout(r, 20));
       }
     } catch (e) {
       setAiLoading(false);
+      const errText = `Query error: ${(e as Error).message}. Please ensure the backend is active.`;
       setAiChatHistory((prev) => [
         ...prev,
         {
           sender: "ai",
-          text: `Query error: ${(e as Error).message}. Please ensure the backend is active.`,
+          text: errText,
           time: new Date().toLocaleTimeString(),
         },
       ]);
+      if (!isVoiceMuted) {
+        speakText("Sorry Boss, an error occurred while connecting to the database.");
+      }
     }
   }
 
@@ -1202,19 +1299,40 @@ export default function AdminDashboardPage() {
               </div>
               <div>
                 <h3 className="text-sm font-bold text-cream">Admin Intelligence AI</h3>
-                <p className="text-[10px] text-emerald-300">Live Database Connected • Multi-Model</p>
+                <p className="text-[10px] text-emerald-300">Live Database Connected • Multi-Turn Voice AI</p>
               </div>
             </div>
-            <button
-              onClick={() => setAiDrawerOpen(false)}
-              className="btn-ghost p-1.5 rounded-lg text-secondary hover:text-cream"
-            >
-              <X size={16} />
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setIsVoiceMuted(!isVoiceMuted)}
+                className={`p-1.5 rounded-lg transition ${
+                  isVoiceMuted
+                    ? "text-lavender/40 hover:text-lavender bg-white/5"
+                    : "text-peach-400 bg-peach-500/10 hover:bg-peach-500/20"
+                }`}
+                title={isVoiceMuted ? "Enable TTS Voice Audio" : "Mute TTS Voice Audio"}
+              >
+                {isVoiceMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+              </button>
+              <button
+                type="button"
+                onClick={() => setAiDrawerOpen(false)}
+                className="btn-ghost p-1.5 rounded-lg text-secondary hover:text-cream"
+              >
+                <X size={16} />
+              </button>
+            </div>
           </div>
 
           {/* Quick Query Preset Chips */}
           <div className="px-4 py-2 border-b border-white/5 flex gap-1.5 overflow-x-auto text-[11px] bg-black/20">
+            <button
+              onClick={() => handleSendAiQuery("check the recent activity in my system")}
+              className="px-2.5 py-1 rounded-full bg-peach-500/20 text-peach-300 hover:bg-peach-500/30 whitespace-nowrap transition border border-peach-500/30 font-medium"
+            >
+              ⚡ Recent system activity
+            </button>
             <button
               onClick={() => handleSendAiQuery("How many suspicious transactions occurred today?")}
               className="px-2.5 py-1 rounded-full bg-white/5 hover:bg-white/10 text-secondary hover:text-cream whitespace-nowrap transition"
@@ -1258,6 +1376,28 @@ export default function AdminDashboardPage() {
                   }`}
                 >
                   <div>{msg.text}</div>
+                  {/* Visual Live Recent Completed Transactions inside bubble */}
+                  {msg.data?.recent_completed_transactions && msg.data.recent_completed_transactions.length > 0 && (
+                    <div className="mt-2.5 pt-2 border-t border-white/10 space-y-1.5 text-[11px]">
+                      <div className="text-[10px] uppercase font-bold text-peach-300 tracking-wider">
+                        Live Completed Activity ({msg.data.recent_completed_transactions.length} txns · ৳{msg.data.recent_volume_bdt?.toLocaleString()} vol)
+                      </div>
+                      <div className="space-y-1 max-h-36 overflow-y-auto pr-1">
+                        {msg.data.recent_completed_transactions.map((tx: any) => (
+                          <div key={tx.id} className="flex items-center justify-between bg-black/25 px-2 py-1 rounded-lg border border-white/5 text-[10px]">
+                            <div className="flex items-center gap-1.5 truncate">
+                              <span className="text-peach-400 font-mono font-semibold">#{tx.id}</span>
+                              <span className="text-cream truncate">@{tx.sender} → @{tx.recipient}</span>
+                              {tx.note && <span className="text-lavender/60 truncate">({tx.note})</span>}
+                            </div>
+                            <div className="font-mono font-semibold text-peach-300 shrink-0 ml-2">
+                              ৳{tx.amount_bdt.toLocaleString()}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   {msg.data?.patterns && (
                     <div className="mt-2 pt-2 border-t border-white/10 text-[10px] space-y-1">
                       {msg.data.patterns.map((p: any, idx: number) => (
@@ -1282,20 +1422,61 @@ export default function AdminDashboardPage() {
             )}
           </div>
 
-          {/* Input Bar */}
-          <div className="p-3 border-t border-white/10 bg-black/20 flex gap-2">
+          {/* Voice status indicator banner */}
+          {isRecordingVoice && (
+            <div className="px-3 py-1.5 bg-peach-500/20 border-t border-peach-500/30 text-[11px] text-peach-300 flex items-center justify-between animate-pulse">
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-peach-500 animate-ping" />
+                Listening to your voice command, Boss...
+              </span>
+              <span className="font-semibold text-peach-400">Tap mic to finish</span>
+            </div>
+          )}
+          {isTranscribingVoice && (
+            <div className="px-3 py-1.5 bg-white/5 border-t border-white/10 text-[11px] text-lavender flex items-center gap-2">
+              <Loader2 size={12} className="animate-spin text-peach-400" />
+              <span>Transcribing voice with Whisper STT...</span>
+            </div>
+          )}
+
+          {/* Input Bar with Voice Control */}
+          <div className="p-3 border-t border-white/10 bg-black/20 flex items-center gap-2">
             <input
               type="text"
-              placeholder="Ask anything about transactions, users, or fraud…"
+              placeholder={isRecordingVoice ? "Listening to your voice..." : "Ask anything or talk to AI by voice…"}
               value={aiQuery}
               onChange={(e) => setAiQuery(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSendAiQuery()}
+              disabled={isRecordingVoice || isTranscribingVoice}
               className="field-input flex-1 text-xs py-2"
             />
+            {/* Voice Control Mic Button */}
+            <button
+              type="button"
+              onClick={() => (isRecordingVoice ? stopVoiceRecording() : startVoiceRecording())}
+              disabled={aiLoading || isTranscribingVoice}
+              title={isRecordingVoice ? "Tap to stop listening" : "Tap to speak to AI (Voice Control)"}
+              className={`p-2 rounded-xl text-xs font-semibold flex items-center justify-center transition-all ${
+                isRecordingVoice
+                  ? "bg-peach-500 text-plum-950 animate-pulse shadow-lg shadow-peach-500/40 scale-105"
+                  : isTranscribingVoice
+                  ? "bg-white/10 text-cream/40"
+                  : "bg-white/10 hover:bg-white/15 text-peach-400 border border-peach-500/20"
+              }`}
+            >
+              {isTranscribingVoice ? (
+                <Loader2 size={15} className="animate-spin text-peach-300" />
+              ) : isRecordingVoice ? (
+                <MicOff size={15} />
+              ) : (
+                <Mic size={15} />
+              )}
+            </button>
             <button
               onClick={() => handleSendAiQuery()}
-              disabled={aiLoading || !aiQuery.trim()}
+              disabled={aiLoading || isRecordingVoice || isTranscribingVoice || !aiQuery.trim()}
               className="btn-peach px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-center disabled:opacity-40"
+              title="Send text query"
             >
               <Send size={14} />
             </button>

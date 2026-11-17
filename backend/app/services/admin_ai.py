@@ -306,7 +306,91 @@ class AdminAIAssistant:
         }
 
     @classmethod
-    def _is_casual_conversation(cls, query: str) -> bool:
+    def get_recent_activity(cls, session: Session, limit: int = 6) -> Dict[str, Any]:
+        """Fetch live recent completed transactions, recent assessments, and volume."""
+        completed_txns = (
+            session.query(Transaction)
+            .filter(
+                Transaction.status == TxnStatus.COMPLETED.value,
+                Transaction.completed_at.isnot(None),
+            )
+            .order_by(desc(Transaction.completed_at), desc(Transaction.id))
+            .limit(limit)
+            .all()
+        )
+
+        txn_items = []
+        total_recent_amt = Decimal("0.00")
+        for t in completed_txns:
+            total_recent_amt += t.amount_bdt
+            # Lookup handles
+            sender_handle = "System"
+            recipient_handle = "System"
+            if t.from_account_id:
+                sender_user = (
+                    session.query(User).join(Account).filter(Account.id == t.from_account_id).one_or_none()
+                )
+                if sender_user:
+                    sender_handle = sender_user.handle
+            if t.to_account_id:
+                receiver_user = (
+                    session.query(User).join(Account).filter(Account.id == t.to_account_id).one_or_none()
+                )
+                if receiver_user:
+                    recipient_handle = receiver_user.handle
+            elif t.kind == "savings":
+                recipient_handle = "Festival Savings"
+            elif t.kind == "bill":
+                recipient_handle = "Utility Bill"
+
+            txn_items.append({
+                "id": t.id,
+                "kind": t.kind,
+                "amount_bdt": float(t.amount_bdt),
+                "sender": sender_handle,
+                "recipient": recipient_handle,
+                "note": t.note,
+                "completed_at": t.completed_at.strftime("%Y-%m-%d %H:%M") if t.completed_at else None,
+            })
+
+        # Recent risk assessments
+        recent_assessments = (
+            session.query(FraudAssessment)
+            .order_by(desc(FraudAssessment.created_at))
+            .limit(4)
+            .all()
+        )
+        suspicious_signals = [
+            {
+                "txn_id": a.txn_id,
+                "risk_score": a.risk_score,
+                "risk_level": a.risk_level,
+                "reasons": json.loads(a.reasons_json) if a.reasons_json else [],
+            }
+            for a in recent_assessments
+            if a.risk_level in ("medium", "high")
+        ]
+
+        if txn_items:
+            first = txn_items[0]
+            summary = (
+                f"Boss, here is the recent activity in your system: {len(txn_items)} completed transactions "
+                f"totaling ৳{float(total_recent_amt):,.2f}. The most recent transfer was ৳{first['amount_bdt']:,.2f} "
+                f"from @{first['sender']} to @{first['recipient']} ({first['kind']}). "
+                f"Recorded {len(suspicious_signals)} elevated risk signals."
+            )
+        else:
+            summary = "Boss, no completed transactions have been recorded recently. The system is operating normally."
+
+        return {
+            "summary": summary,
+            "recent_completed_transactions": txn_items,
+            "recent_volume_bdt": float(total_recent_amt),
+            "suspicious_signals": suspicious_signals,
+        }
+
+    @classmethod
+    def _is_casual_conversation(cls, query: str, history: Optional[List[Dict[str, Any]]] = None) -> bool:
         """Detect whether a query is small talk/greeting vs an operational financial/fraud query."""
         import re
         q = query.strip().lower()
@@ -314,6 +398,14 @@ class AdminAIAssistant:
         words = cleaned.split()
         if not words:
             return True
+
+        # Follow-up inquiries within an active conversation should not be treated as mere greetings
+        followup_signals = {
+            "who", "which", "why", "how", "what about", "tell me more", "details",
+            "him", "her", "that", "them", "second", "first", "third", "last", "more"
+        }
+        if history and any(s in cleaned for s in followup_signals):
+            return False
 
         greetings = {"hi", "hello", "hey", "hola", "salam", "assalam", "assalamu alaikum", "good morning", "good evening", "good afternoon", "yo"}
         smalltalk_phrases = [
@@ -332,7 +424,8 @@ class AdminAIAssistant:
             "pattern", "patterns", "anomaly", "anomalous", "volume", "turnover",
             "spent", "transaction", "transactions", "txn", "txns", "user", "users",
             "repeated", "unresolved", "investigation", "investigations", "health",
-            "system", "engine", "service", "flag", "flagged", "reasons", "today", "money"
+            "system", "engine", "service", "flag", "flagged", "reasons", "today", "money",
+            "activity", "recent", "latest", "check"
         }
         if any(w in domain_keywords for w in words):
             return False
@@ -343,27 +436,53 @@ class AdminAIAssistant:
         return False
 
     @classmethod
-    def answer_admin_query(cls, session: Session, query: str) -> Dict[str, Any]:
+    def answer_admin_query(
+        cls,
+        session: Session,
+        query: str,
+        history: Optional[List[Dict[str, Any]]] = None,
+    ) -> Dict[str, Any]:
         """Senior-architecture AI query handler:
-        1. Casual conversation / greetings are kept strictly in the LLM's hands with 0 DB queries.
-        2. Domain / operational queries target ONLY the specific live database table required,
+        1. Multi-turn conversation memory preserves context across multiple turns.
+        2. Casual conversation / greetings are kept strictly in the LLM's hands with 0 DB queries.
+        3. Operational queries target live database tables (including recent system activity),
            grounding the multi-model cascade with factual records.
         """
         from .. import llm
 
+        # Format multi-turn conversational history (up to last 8 turns)
+        formatted_history = ""
+        if history:
+            valid_turns = [
+                t for t in history[-8:]
+                if isinstance(t, dict) and t.get("text") and t.get("sender")
+            ]
+            if valid_turns:
+                history_lines = []
+                for t in valid_turns:
+                    speaker = "Administrator (Talukder)" if t["sender"] == "admin" else "AI Assistant"
+                    history_lines.append(f"{speaker}: {t['text']}")
+                formatted_history = (
+                    "PREVIOUS CONVERSATION HISTORY (Use this to resolve context, pronouns, and follow-up questions):\n"
+                    + "\n".join(history_lines)
+                    + "\n\n"
+                )
+
         # 1. Casual conversation: No DB queries, pure LLM conversational intelligence
-        if cls._is_casual_conversation(query):
+        if cls._is_casual_conversation(query, history=history):
             system_prompt = (
-                "You are the FinTech Fraud Intelligence AI Assistant speaking with Administrator Talukder. "
+                "You are the FinTech Fraud Intelligence AI Assistant speaking directly with Administrator Talukder (Boss). "
                 "You assist with monitoring transactions, fraud alerts, risk scores, and platform security. "
                 "Respond naturally, politely, and concisely (1 to 2 sentences) to the administrator's greeting or question. "
-                "Address them respectfully as Talukder or Admin. "
+                "Address them respectfully as Boss or Talukder. "
+                "Maintain continuity with the previous conversation context if present. "
                 "Ask what they would like to investigate or monitor today. "
-                "Do NOT dump or cite unrequested transaction numbers or fraud statistics."
+                "Do NOT dump or cite unrequested transaction numbers or fraud statistics.\n\n"
+                f"{formatted_history}"
             )
             fallback_text = (
-                "Hello Talukder! I am your live Fraud Intelligence AI Assistant. "
-                "I can analyze suspicious transactions, risk scores, velocities, or fraud alerts. "
+                "Hello Boss! I am your live Fraud Intelligence AI Assistant. "
+                "I can check recent activity, analyze suspicious transactions, risk scores, velocities, or fraud alerts. "
                 "What would you like to investigate?"
             )
             try:
@@ -384,7 +503,14 @@ class AdminAIAssistant:
 
         # 2. Targeted Live Database Query: Fetch ONLY the dataset requested
         q = query.lower()
-        if any(w in q for w in ["suspicious", "today", "how many"]):
+        if any(w in q for w in [
+            "recent activity", "system activity", "latest activity",
+            "recent transactions", "activity in my system", "activity",
+            "what's happening", "whats happening", "recent events", "check activity"
+        ]):
+            data = cls.get_recent_activity(session)
+            intent = "recent_activity"
+        elif any(w in q for w in ["suspicious today", "how many suspicious", "today's suspicious"]):
             data = cls.get_suspicious_today(session)
             intent = "suspicious_today"
         elif any(w in q for w in ["highest", "highest risk", "top risk", "risky", "high risk"]):
@@ -411,17 +537,26 @@ class AdminAIAssistant:
         elif any(w in q for w in ["health", "properly", "status", "working", "service"]):
             data = cls.get_fraud_service_health(session)
             intent = "service_health"
-        else:
+        elif any(w in q for w in ["suspicious"]):
             data = cls.get_suspicious_today(session)
-            intent = "general_overview"
+            intent = "suspicious_today"
+        elif formatted_history:
+            # Multi-turn follow-up question
+            data = cls.get_recent_activity(session)
+            intent = "follow_up"
+        else:
+            data = cls.get_recent_activity(session)
+            intent = "recent_activity"
 
-        # Ground the LLM with only the specific database facts
+        # Ground the LLM with live database facts and conversational context
         system_prompt = (
-            "You are the FinTech Fraud Intelligence AI Assistant speaking with Administrator Talukder. "
+            "You are the FinTech Fraud Intelligence AI Assistant speaking directly with Administrator Talukder (Boss). "
             "You have live, direct access to the real production database records. "
             "Answer the question concisely, directly, and accurately (1 to 3 sentences). "
-            "Address the administrator respectfully as Talukder or Admin. "
-            "Use the exact facts from the database records provided below. Never invent numbers.\n\n"
+            "Address the administrator respectfully as Boss or Talukder. "
+            "If asked to check recent activity, begin naturally with 'Boss, here is the recent activity in your system:' or similar phrasing. "
+            "Use the exact facts from the database records provided below. Never invent numbers or transactions.\n\n"
+            f"{formatted_history}"
             f"LIVE DATABASE RECORDS:\n{json.dumps(data, indent=2)}"
         )
 

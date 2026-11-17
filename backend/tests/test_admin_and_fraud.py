@@ -261,6 +261,7 @@ def test_admin_ai_assistant_live_database_queries():
         "Show me the latest fraud alerts.",
         "What is the current transaction volume?",
         "Is the fraud detection service working properly?",
+        "check the recent activity in my system",
     ]
 
     for q in queries:
@@ -270,3 +271,25 @@ def test_admin_ai_assistant_live_database_queries():
         assert "response" in data
         assert "data" in data
         assert len(data["response"]) > 0
+
+    # Test casual conversation separation (0 DB overhead)
+    casual_resp = client.post("/admin/api/ai/query", json={"query": "hi"}, headers=headers)
+    assert casual_resp.status_code == 200
+    casual_data = casual_resp.json()
+    assert casual_data["intent"] == "greeting"
+    assert casual_data["data"] is None
+
+    # Test multi-turn conversational context
+    history = [
+        {"sender": "admin", "text": "Who is the top offender?"},
+        {"sender": "ai", "text": "User bikash has 2 flagged transactions requiring review."},
+    ]
+    multi_resp = client.post(
+        "/admin/api/ai/query",
+        json={"query": "tell me more details about him", "history": history},
+        headers=headers,
+    )
+    assert multi_resp.status_code == 200
+    multi_data = multi_resp.json()
+    assert multi_data["intent"] in ("follow_up", "recent_activity", "repeated_users")
+    assert len(multi_data["response"]) > 0
