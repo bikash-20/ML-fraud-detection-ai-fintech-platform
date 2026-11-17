@@ -12,7 +12,7 @@ import { ReviewCard } from "@/components/ReviewCard";
 import { HistoryList } from "@/components/HistoryList";
 import { PendingRequests } from "@/components/PendingRequests";
 import { VoiceButton } from "@/components/VoiceButton";
-import { ChatBar } from "@/components/ChatBar";
+import { ChatBar, ChatBarHandle } from "@/components/ChatBar";
 import { SplitForm } from "@/components/SplitForm";
 import { SavingsGoals } from "@/components/SavingsGoals";
 import { FinancialIntelligenceCard } from "@/components/FinancialIntelligenceCard";
@@ -51,6 +51,7 @@ export default function DashboardPage() {
   // render commits. Stored on the reviewResp itself is fine too, but a ref
   // keeps the wire shape untouched.
   const pendingKeyRef = useRef<string | null>(null);
+  const chatBarRef = useRef<ChatBarHandle | null>(null);
   const [working, setWorking] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -545,11 +546,13 @@ export default function DashboardPage() {
 
       {/* Chat bar (always on; lets users type or talk) */}
       <motion.div
+        id="chat-bar-container"
         className="mb-4"
         variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0 } }}
         transition={{ duration: 0.5, ease: "easeOut" }}
       >
         <ChatBar
+          ref={chatBarRef}
           userId={activeId}
           onCommand={sendIntent}
           disabled={working}
@@ -570,7 +573,13 @@ export default function DashboardPage() {
         >
           <FinancialIntelligenceCard
             userId={activeId}
-            onAskAI={(prompt) => sendIntent(prompt)}
+            onAskAI={(prompt) => {
+              const el = document.getElementById("chat-bar-container");
+              if (el) {
+                el.scrollIntoView({ behavior: "smooth", block: "center" });
+              }
+              chatBarRef.current?.sendPrompt(prompt);
+            }}
           />
         </motion.div>
       )}

@@ -276,16 +276,38 @@ export default function AdminDashboardPage() {
 
     try {
       const res = await api.queryAdminAI(q);
+      const fullText = res.response;
+      setAiLoading(false);
+
+      // Add empty response bubble to stream word-by-word
       setAiChatHistory((prev) => [
         ...prev,
         {
           sender: "ai",
-          text: res.response,
+          text: "",
           data: res.data,
           time: new Date().toLocaleTimeString(),
         },
       ]);
+
+      // Reveal words one by one for natural conversational streaming
+      const words = fullText.split(" ");
+      let accumulated = "";
+      for (let i = 0; i < words.length; i++) {
+        accumulated += (i === 0 ? "" : " ") + words[i];
+        const current = accumulated;
+        setAiChatHistory((prev) => {
+          const next = [...prev];
+          const lastIdx = next.length - 1;
+          if (lastIdx >= 0 && next[lastIdx].sender === "ai") {
+            next[lastIdx] = { ...next[lastIdx], text: current };
+          }
+          return next;
+        });
+        await new Promise((r) => setTimeout(r, 25));
+      }
     } catch (e) {
+      setAiLoading(false);
       setAiChatHistory((prev) => [
         ...prev,
         {
@@ -294,8 +316,6 @@ export default function AdminDashboardPage() {
           time: new Date().toLocaleTimeString(),
         },
       ]);
-    } finally {
-      setAiLoading(false);
     }
   }
 

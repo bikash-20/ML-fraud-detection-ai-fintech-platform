@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { VoiceButton } from "./VoiceButton";
 import { ArrowUp } from "lucide-react";
@@ -14,25 +14,46 @@ export type ChatMessage = {
   typing?: boolean;
 };
 
+export type ChatBarHandle = {
+  sendPrompt: (text: string) => void;
+  focus: () => void;
+};
+
 let _id = 0;
 const nextId = () => ++_id;
 
-export function ChatBar({
-  userId,
-  onCommand,
-  disabled,
-  placeholder = "Say something, e.g. 'send 500 to rishad'",
-}: {
-  userId: number;
-  onCommand: (text: string) => Promise<{ text: string } | null>; // command to /agent/act
-  disabled?: boolean;
-  placeholder?: string;
-}) {
+export const ChatBar = forwardRef<
+  ChatBarHandle,
+  {
+    userId: number;
+    onCommand: (text: string) => Promise<{ text: string } | null>; // command to /agent/act
+    disabled?: boolean;
+    placeholder?: string;
+  }
+>(function ChatBar(
+  {
+    userId,
+    onCommand,
+    disabled,
+    placeholder = "Say something, e.g. 'send 500 to rishad'",
+  },
+  ref
+) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  useImperativeHandle(ref, () => ({
+    sendPrompt: (text: string) => {
+      sendText(text);
+    },
+    focus: () => {
+      inputRef.current?.focus();
+    },
+  }));
 
   useEffect(() => {
     return subscribeSpeaking(setSpeaking);
@@ -231,6 +252,7 @@ export function ChatBar({
       {/* Input row */}
       <form onSubmit={onSubmit} className="flex items-center gap-2">
         <input
+          ref={inputRef}
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -252,4 +274,4 @@ export function ChatBar({
       </form>
     </div>
   );
-}
+});

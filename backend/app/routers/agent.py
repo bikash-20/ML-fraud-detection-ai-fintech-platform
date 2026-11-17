@@ -277,10 +277,27 @@ def agent_act(req: AgentActRequest) -> AgentActResponse:
         if action == "pay_bill":
             return _handle_pay_bill(s, req, intent_dict, billers, user)
 
-        # Unknown / unparseable.
+        # Conversational / financial advisory query — ground with live database facts
+        from ..services import financial_intelligence
+        insights = financial_intelligence.calculate_financial_insights(s, req.user_id)
+        current_balance = _post_debit_balance(s, req.user_id)
+        user_facts = {
+            "user_handle": user.handle,
+            "balance_bdt": float(current_balance),
+            "spending_last_30_days_bdt": float(insights.get("total_spent_30d_bdt", "0").replace(",", "")),
+            "spending_last_7_days_bdt": float(insights.get("total_spent_7d_bdt", "0").replace(",", "")),
+            "weekly_velocity_vs_average": f"{insights.get('weekly_velocity_pct', 0)}%",
+            "health_score": f"{insights.get('health_score')}/100 ({insights.get('health_rating')})",
+            "category_breakdown": insights.get("category_breakdown", []),
+            "recommendations": [
+                f"{r.get('title')}: {r.get('description')}" for r in insights.get("recommendations", [])
+            ],
+        }
+        reply_text = llm.chat_reply(req.text, user.handle, user_facts=user_facts)
         return AgentActResponse(
-            text=llm.phrase("rephrase", {}),
-            action="unknown",
+            text=reply_text,
+            action="advisory",
+            data=insights,
         )
 
 
@@ -692,7 +709,23 @@ def agent_chat(req: AgentChatRequest) -> AgentChatResponse:
                 action="set_budget",
             )
 
-        text = llm.chat_reply(req.text, u.handle)
+        # Conversational query — provide live database financial facts
+        from ..services import financial_intelligence
+        insights = financial_intelligence.calculate_financial_insights(s, req.user_id)
+        current_balance = _post_debit_balance(s, req.user_id)
+        user_facts = {
+            "user_handle": u.handle,
+            "balance_bdt": float(current_balance),
+            "spending_last_30_days_bdt": float(insights.get("total_spent_30d_bdt", "0").replace(",", "")),
+            "spending_last_7_days_bdt": float(insights.get("total_spent_7d_bdt", "0").replace(",", "")),
+            "weekly_velocity_vs_average": f"{insights.get('weekly_velocity_pct', 0)}%",
+            "health_score": f"{insights.get('health_score')}/100 ({insights.get('health_rating')})",
+            "category_breakdown": insights.get("category_breakdown", []),
+            "recommendations": [
+                f"{r.get('title')}: {r.get('description')}" for r in insights.get("recommendations", [])
+            ],
+        }
+        text = llm.chat_reply(req.text, u.handle, user_facts=user_facts)
     # Best-effort classification so the UI can show different icons.
     norm = req.text.strip().lower()
     action = "fallback"

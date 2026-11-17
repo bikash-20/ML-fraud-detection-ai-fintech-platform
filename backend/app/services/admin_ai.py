@@ -307,16 +307,26 @@ class AdminAIAssistant:
 
     @classmethod
     def answer_admin_query(cls, session: Session, query: str) -> Dict[str, Any]:
-        """Dispatch query to the correct database-backed tool, then synthesize response."""
+        """Dispatch query to the live database, then synthesize a natural response using the multi-model cascade."""
         q = query.lower()
 
-        if any(w in q for w in ["suspicious", "today", "how many"]):
-            data = cls.get_suspicious_today(session)
+        # Always fetch live summary stats for broad context
+        today_stats = cls.get_suspicious_today(session)
+        high_risk_stats = cls.get_highest_risk_txns(session, limit=5)
+        volume_stats = cls.get_volume_summary(session)
+        unresolved_stats = cls.get_unresolved_investigations(session)
+
+        # Specific query classification
+        if any(w in q for w in ["hi", "hello", "hey", "salam", "morning", "evening"]):
+            data = today_stats
+            intent = "greeting"
+        elif any(w in q for w in ["suspicious", "today", "how many"]):
+            data = today_stats
             intent = "suspicious_today"
-        elif any(w in q for w in ["highest", "highest risk", "top risk"]):
-            data = cls.get_highest_risk_txns(session)
+        elif any(w in q for w in ["highest", "highest risk", "top risk", "risky"]):
+            data = high_risk_stats
             intent = "highest_risk"
-        elif any(w in q for w in ["pattern", "anomalous", "unusual pattern"]):
+        elif any(w in q for w in ["pattern", "anomalous", "unusual pattern", "anomaly"]):
             data = cls.get_unusual_patterns(session)
             intent = "unusual_patterns"
         elif any(w in q for w in ["repeat", "user", "repeated", "offenders"]):
@@ -329,38 +339,48 @@ class AdminAIAssistant:
             data = cls.get_flag_reasons_breakdown(session)
             intent = "flag_reasons"
         elif any(w in q for w in ["volume", "total money", "turnover", "spent"]):
-            data = cls.get_volume_summary(session)
+            data = volume_stats
             intent = "volume_summary"
         elif any(w in q for w in ["unresolved", "investigation", "pending alert"]):
-            data = cls.get_unresolved_investigations(session)
+            data = unresolved_stats
             intent = "unresolved_investigations"
         elif any(w in q for w in ["health", "properly", "status", "working", "service"]):
             data = cls.get_fraud_service_health(session)
             intent = "service_health"
         else:
-            # Fallback overview
-            data = cls.get_suspicious_today(session)
+            data = today_stats
             intent = "general_overview"
 
-        # Format prompt with live facts for natural AI response
-        factual_context = json.dumps(data, indent=2)
+        # Holistic live facts context
+        live_facts = {
+            "query_specific_data": data,
+            "platform_overview": {
+                "suspicious_today": today_stats.get("suspicious_count", 0),
+                "high_risk_today": today_stats.get("high_risk_count", 0),
+                "total_evaluated_today": today_stats.get("total_today", 0),
+                "total_volume_bdt": volume_stats.get("total_volume_bdt", 0),
+                "completed_transactions": volume_stats.get("completed_transactions", 0),
+                "unresolved_investigations": unresolved_stats.get("unresolved_count", 0),
+                "highest_risk_recorded": high_risk_stats.get("items", [{}])[0].get("risk_score", 0) if high_risk_stats.get("items") else 0,
+            },
+        }
+
+        factual_context = json.dumps(live_facts, indent=2)
         system_prompt = (
-            "You are the FinTech Fraud Intelligence AI Assistant for Wallet Platform. "
-            "You have direct access to live production database records. "
-            "Answer the administrator's question concisely, professionally, and accurately. "
-            "Use ONLY the verified database facts provided below. "
-            "Never invent numbers, transactions, or user identities. "
-            "Highlight risk metrics and suggest investigation priorities when relevant.\n\n"
-            f"VERIFIED DATABASE FACTS:\n{factual_context}"
+            "You are the FinTech Fraud Intelligence AI Assistant speaking with Administrator Talukder. "
+            "You have live, direct access to the real production database records. "
+            "Answer the question naturally, intelligently, and concisely (2 to 4 sentences). "
+            "Address the administrator respectfully as Talukder or Admin. "
+            "If it is a greeting, greet Talukder warmly and give a one-sentence operational snapshot. "
+            "If asking about transactions, risk, alerts, or volume, use the exact facts from the database context. "
+            "Never invent numbers or transactions.\n\n"
+            f"LIVE DATABASE FACTS:\n{factual_context}"
         )
 
-        # Attempt to synthesize using the cascade (Qwen / Grok / OpenRouter)
         from .. import llm
         try:
-            ai_text = ""
-            for token in llm._stream_cascade(system_prompt, query):
-                ai_text += token
-            ai_text = ai_text.strip()
+            ai_text = llm.generate_cascade(system_prompt, query).strip()
+            ai_text = ai_text.strip().strip('"').strip("`")
             if not ai_text:
                 ai_text = data.get("summary", "Query processed successfully based on database records.")
         except Exception as e:

@@ -220,6 +220,55 @@ def _collect(system: str, user: str) -> str:
     return out or ""
 
 
+def stream_cascade(system: str, user: str) -> Iterator[str]:
+    """Stream response tokens across the multi-model cascade (Ollama -> Grok -> OpenRouter)."""
+    # 1. Local Ollama cascade
+    for label, fn in _ollama_cascade():
+        try:
+            tokens = []
+            for chunk in fn(label.split(":", 1)[1], system, user):
+                tokens.append(chunk)
+                yield chunk
+            if tokens:
+                return
+        except Exception as e:
+            sys.stderr.write(f"[llm] {label} stream failed: {e}\n")
+
+    # 2. Grok
+    if (config.GROK_API_KEY or "").strip():
+        for model in config.GROK_MODELS:
+            try:
+                tokens = []
+                for chunk in _stream_grok(model, system, user):
+                    tokens.append(chunk)
+                    yield chunk
+                if tokens:
+                    return
+            except Exception as e:
+                sys.stderr.write(f"[llm] grok:{model} stream failed: {e}\n")
+
+    # 3. OpenRouter
+    if (config.OPENROUTER_API_KEY or "").strip():
+        for model in config.OPENROUTER_MODELS:
+            try:
+                tokens = []
+                for chunk in _stream_openrouter(model, system, user):
+                    tokens.append(chunk)
+                    yield chunk
+                if tokens:
+                    return
+            except Exception as e:
+                sys.stderr.write(f"[llm] openrouter:{model} stream failed: {e}\n")
+
+
+def generate_cascade(system: str, user: str) -> str:
+    """Generate a response using the multi-model cascade (Ollama -> Grok -> OpenRouter)."""
+    return _collect(system, user)
+
+
+_stream_cascade = stream_cascade
+
+
 # ---- Intent parser ----------------------------------------------------------
 def parse_intent(
     text: str,
@@ -780,26 +829,35 @@ def phrase(text_kind: str, facts: dict) -> str:
 
 
 # ---- Chat (conversational) -------------------------------------------------
-def chat_reply(text: str, user_handle: str) -> str:
-    """Conversational reply for greetings / small talk.
+def chat_reply(text: str, user_handle: str, user_facts: Optional[dict] = None) -> str:
+    """Conversational and financial advisory reply.
 
-    Uses the LLM cascade if available; falls back to deterministic templates
-    so the system always replies.
-
-    Fast path: for clear greetings / thanks / bye, skip the LLM entirely
-    (no 10s round-trip). The LLM is reserved for ambiguous small talk.
+    Uses the LLM cascade grounded in live database facts (balance, spending,
+    goals, recommendations) if available; falls back to deterministic templates
+    so the system always replies without failing.
     """
     norm = _normalize(text)
-    if _classify_action(norm) in {"greeting", "thanks", "bye"}:
+    if not user_facts and _classify_action(norm) in {"greeting", "thanks", "bye"}:
         return _deterministic_chat(text, user_handle)
 
-    system = (
-        "You are Wallet Assistant — concise, friendly, BD-flavored. "
-        "Address the user as 'Boss' when natural. Keep replies short (1-2 sentences). "
-        "You can also answer simple questions about balances or transaction history. "
-        "Reply with ONLY the sentence, no quotes, no markdown."
-    )
-    user = f"User ({user_handle}) said: {text}"
+    if user_facts:
+        facts_str = json.dumps(user_facts, indent=2)
+        system = (
+            "You are Wallet Financial Assistant — an intelligent, concise, BD-grounded AI advisor. "
+            "Address the user as 'Boss'. Keep replies direct, helpful, and natural (2-3 sentences max). "
+            "Use the verified LIVE DATABASE FACTS below to give practical, specific, grounded financial advice. "
+            "Give concrete taka amounts and actionable guidance. Do not fabricate numbers or facts.\n\n"
+            f"LIVE DATABASE FACTS:\n{facts_str}"
+        )
+    else:
+        system = (
+            "You are Wallet Assistant — concise, friendly, BD-flavored. "
+            "Address the user as 'Boss' when natural. Keep replies short (1-2 sentences). "
+            "You can also answer simple questions about balances or transaction history. "
+            "Reply with ONLY the sentence, no quotes, no markdown."
+        )
+
+    user = f"User ({user_handle}) asked: {text}"
     try:
         out = _collect(system, user).strip()
         out = out.strip().strip('"').strip("`")
