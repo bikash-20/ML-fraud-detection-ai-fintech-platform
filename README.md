@@ -1,373 +1,308 @@
 # Wallet
 
-## Digital AI Money Movement Platform
+## Digital AI Money Movement & Fraud Intelligence Platform
 
-Wallet is a voice-first, chat-enabled money movement platform for everyday financial actions. It combines a deterministic financial ledger with local AI conversation, speech recognition, natural voice output, explicit transaction confirmation, split payments, requests, recent activity, festival savings goals, and browser-side biometric confirmation via Face ID.
+Wallet is a voice-first, chat-enabled money movement and fraud surveillance platform for everyday financial actions. It combines a deterministic financial ledger with local AI conversation, speech recognition, natural voice output, explicit transaction confirmation, split payments, requests, festival savings goals, browser-side biometric confirmation via Face ID, an autonomous **Financial Intelligence Layer**, and an enterprise-grade **Admin Fraud Intelligence Platform**.
 
 The system is designed around one non-negotiable rule:
 
-> The AI may understand language and make the experience feel human, but it never owns the ledger and never invents financial facts.
+> The AI may understand language, explain risk, and make the experience feel human, but it never owns the ledger and never invents financial facts.
 
-Balances, recipients, amounts, transaction state, idempotency, and money movement are controlled by deterministic Python and SQLAlchemy code.
+Balances, recipients, amounts, transaction state, idempotency, and money movement are strictly controlled by deterministic Python and SQLAlchemy code.
+
+---
 
 ## Capabilities
 
-- Voice and text conversation with casual chat support.
-- Voice input through browser microphone and Faster Whisper transcription.
-- Voice responses through browser speech synthesis plus optional server-side TTS.
-- Wake-word listening ("Hey Wallet") via openWakeWord running entirely in the browser.
-- Local Ollama model cascade with DeepSeek as the primary model.
-- Deterministic regex fallback when the model is unavailable.
-- Exact balance and history answers from SQLite ledger state.
-- Send-money flow with review, explicit confirmation, expiry, and cancellation.
-- Request-money flow with idempotency protection and payer actions.
-- Equal split payments to two or more recipients in one confirmed operation.
-- Festival savings goals for Eid, Durga Puja, Pohela Boishakh, Valentine's Day, or custom celebrations.
-- Idempotent savings contributions recorded in recent activity.
-- Recent balance timeline focused on the latest few days of activity.
-- Fuzzy recipient resolution with self-transfer protection.
-- Atomic debit/credit operations and insufficient-funds protection.
-- Background expiry sweeper for unconfirmed transactions.
-- Runtime health reporting for Ollama and configured model readiness.
-- **Face ID enrollment and payment confirmation** using face-api.js in the browser.
-- Responsive Next.js dashboard with Framer Motion and accessible controls.
+### 1. Everyday Money Movement
+- **Voice and text conversation** with natural-language commands and casual small-talk support.
+- **Voice input & transcription** through browser microphone and local Faster-Whisper.
+- **Voice responses** via browser SpeechSynthesis and optional server-side TTS engines.
+- **Wake-word listening** ("Hey Wallet") via openWakeWord running entirely in the browser.
+- **Explicit Confirmation Safety**: Transactions create a review card first; execution requires explicit button tap, voice "yes", or biometric verification.
+- **Send, Request & Split Money**: Transfer funds to known contacts, request funds with payer notifications, or divide a bill equally among multiple recipients in a single atomic transaction.
+- **Festival Savings Goals**: Create dedicated savings pockets (Eid, Durga Puja, Pohela Boishakh, Valentine's Day, or custom goals) with progress tracking.
+- **Strict Recent History Lifecycle**: Recent history **only reflects confirmed, completed transactions** really executed in the database. Pending, cancelled, or network-disconnected transfers are excluded.
+
+### 2. Autonomous Financial Intelligence Layer
+- **Financial Health Scoring**: Real-time budget health score (0–100 scale: *Excellent, Good, Moderate, Needs Attention*) computed from 30-day outflows, savings pace, and velocity.
+- **30-Day Spending Category Breakdown**: Visual spending distribution across categorized expenses (food, bills, festival savings, transfers, other).
+- **7-Day Spending Velocity Tracking**: Percentage comparison of weekly spending against the 30-day baseline to detect elevated spending velocity early.
+- **Personalized Budget Recommendations**: AI-generated suggestions with interactive **"Ask AI Guide"** panels that expand inline with word-by-word streaming advice, actionable roadmaps, and voice playback.
+- **Financial Literacy Assistant**: Interactive literacy guides on emergency funds, the 50/30/20 rule, smart festival savings, and debt management.
+
+### 3. Dedicated Admin Fraud Intelligence & Surveillance Platform
+- **Secure Admin Authentication**: Dedicated admin login flow (`/admin/login`) with bcrypt password verification, JWT sessions, and role-based access control (`super_admin`, `fraud_analyst`, `compliance_auditor`).
+- **Live Database Overview**: Real-time KPIs for registered users, active accounts, completed transaction volume, suspicious event counts, and pending investigations.
+- **Explainable Fraud Risk Assessment**: Hybrid rule + anomaly detection engine scoring every transaction (*Low, Medium, High*) with explainable risk factors, velocity spikes, and drain ratio metrics.
+- **Alert Triage & Investigation Workflow**: Update alert status (`new`, `investigating`, `resolved`, `false_positive`) with administrative investigation notes and immutable security audit logs.
+- **Account Actions**: One-click **Account Freeze** and **Security Watch** controls to immediately block unauthorized funds movement.
+- **Admin Intelligence AI Assistant**: Live database-grounded conversational assistant featuring word-by-word streaming typewriter animation for operational queries without hallucinations.
+
+---
 
 ## Architecture
 
 ```text
-Browser voice or chat (mic, text, Face ID)
-        |
-        v
-Next.js dashboard (App Router)
-   |-- FaceIDEnroll.tsx      enrolls face via webcam, stores 128-dim embedding
-   |-- FaceIDConfirm.tsx     verifies face before money actions are confirmed
-   |-- openWakeWord.ts       always-on "Hey Wallet" trigger word
-   |-- useVoiceLoop.ts       wake-word -> STT -> /agent/act -> confirm pipeline
-        |
-        | /api proxy
-        v
-FastAPI routers
-        |
-        +--> Intent parser and conversational assistant
-        |       +--> Ollama: DeepSeek first
-        |       +--> OpenRouter fallback when configured
-        |       +--> deterministic regex fallback
-        |
-        +--> Resolver: recipient and amount validation
-        |
-        +--> Transaction engine
-        |       +--> pending -> completed/cancelled
-        |       +--> atomic debit and credit
-        |       +--> idempotency
-        |       +--> TTL expiry sweeper
-        |
-        +--> SQLAlchemy + SQLite demo ledger
+Browser voice, chat, or admin UI
+        │
+        ▼
+Next.js 14 App Router
+   ├── FaceIDEnroll.tsx           Enrolls face via webcam, stores 128-dim embedding
+   ├── FaceIDConfirm.tsx          Verifies face before high-value actions are authorized
+   ├── FinancialIntelligenceCard  Health score, category breakdown, recommendations & AI guide
+   ├── openWakeWord.ts            Always-on "Hey Wallet" trigger word
+   ├── useVoiceLoop.ts            Wake-word -> STT -> /agent/act -> confirm pipeline
+   └── /admin                     Dedicated Fraud Intelligence & Monitoring Platform
+        │
+        │ HTTP / REST / SSE
+        ▼
+FastAPI Application Cluster
+   ├── Fast-Path Intent Router
+   │      ├── Casual Small Talk   ──► Pure LLM Cascade (0 DB load, fast conversational reply)
+   │      └── Operational Query   ──► Targeted Live DB Query ──► Grounded LLM Response
+   ├── Multi-Model AI Cascade
+   │      ├── Local Ollama (Qwen 2.5 7B / DeepSeek)
+   │      ├── Grok (xAI API)
+   │      ├── OpenRouter Cloud Fallback
+   │      └── Deterministic Rule/Regex Fallback
+   ├── Fraud Detection Engine
+   │      ├── Rule-based risk evaluation (<1.5ms latency)
+   │      ├── Behavioral anomaly detection (velocity, drain ratio, spikes)
+   │      └── Explainable risk score & alert generation
+   ├── Financial Intelligence Engine
+   │      ├── 30-day category spend aggregation & health scoring
+   │      ├── Weekly velocity baseline calculations
+   │      └── Personalized recommendation & literacy guide generation
+   ├── Transaction & Ledger Engine
+   │      ├── Atomic debit/credit mutations (ACID)
+   │      ├── Idempotency enforcement & replay protection
+   │      └── Pending TTL sweeper & account freeze enforcement
+   └── SQLAlchemy + SQLite / MySQL Ledger State
 ```
 
-### Safety boundary
+### Senior Architectural Separation: Chat vs. Database Operations
 
-Every money-moving action follows this sequence:
+```text
+Incoming Message
+       │
+       ├─ Casual Greeting / Small Talk ("hi", "salam", "how are you", "who are you")
+       │     └─► Pure LLM Cascade (0 DB Queries, Zero Connection Overhead, No Data-Dumping)
+       │
+       └─ Operational / Financial Query ("highest risk txns", "spending where", "pace eid goal")
+             └─► Targeted Single-Table DB Query ──► Grounded Multi-Model LLM Response
+```
+
+---
+
+## Safety Boundary & Transaction Lifecycle
+
+Every money-moving action follows this strict lifecycle:
 
 ```text
 user speech/text
-  -> intent parsing
-  -> deterministic validation and recipient resolution
-  -> pending transaction or request
-  -> review card and spoken review
-  -> Face ID confirmation (when enrolled)
-     -- browser captures webcam frame
-     -- extracts 128-dim embedding
-     -- cosine similarity vs locally-stored reference
-     -- match -> proceeds; mismatch -> cancel
-  -> atomic ledger mutation
-  -> spoken and visible result
+  -> intent parsing (regex + LLM cascade)
+  -> deterministic validation & recipient resolution
+  -> pre-transaction fraud risk assessment (Low, Medium, High)
+  -> pending transaction record created in database (status="pending")
+  -> review card rendered in UI & spoken via TTS
+  -> user confirmation (Confirmation toggle button, voice "yes", or biometric Face ID)
+  -> if confirmed:
+       -> atomic ledger execution (status="completed", completed_at=now)
+       -> funds debited/credited atomically
+       -> background categorizer tags transaction
+       -> appears in Recent History
+  -> if declined / disconnected / timed out:
+       -> status="cancelled", zero money moved
+       -> strictly excluded from Recent History
 ```
 
-The LLM does not receive database write access. Financial phrasing uses database facts and deterministic templates so a model cannot alter a balance in its response. Face ID matching runs entirely in the browser; the server only stores an opaque 128-dimensional float vector that cannot be reverse-engineered into a photograph.
+---
 
-## Face ID
+## Admin Fraud Intelligence Platform
 
-Face ID replaces the typed "yes" / spoken confirmation for money actions. It is a **demo biometric**, not a security boundary:
+Access the administrative monitoring console at:
+**`http://localhost:3000/admin`**
 
-- **Browser-only matching.** A webcam frame is captured, the [face-api.js](https://github.com/justadudewhohacks/face-api.js) detector (tiny_face_detector + face_landmark_68_tiny + face_recognition_net) produces a 128-dim embedding, and cosine similarity is compared against the reference vector in `localStorage`. The server never sees the raw frame.
-- **Server-side opaque blob.** The backend stores only the 128-dim float array for cross-device recovery and for the "I deleted localStorage" case. There is no way to recover the original face from that array.
-- **Enrollment.** Settings -> Face ID -> Enroll. Captures six frames over ~2 seconds and averages them to produce a stable reference (per-frame jitter ~0.02 cosine, averaging reduces it ~sqrt(6) ≈ 2.5x).
-- **Re-enrollment.** Overwrites the previous embedding both on the server and in `localStorage`.
-- **Removal.** Settings -> Remove. Clears both copies.
-- **Threshold.** `FACE_MATCH_THRESHOLD = 0.6` (cosine similarity). Mismatches surface as "different face detected" rather than a silent retry, so a shoulder-surfer cannot brute-force the prompt.
+- **Login Route**: `/admin/login`
+- **Default Credentials**:
+  - **Phone**: `01926240062`
+  - **Password**: `1234`
+  - **Admin Name**: `talukder` (Super Admin)
 
-**Threat model.** This raises the cost of accidental shoulder-surfing and prevents a casual user from confirming while a different person is at the screen. It is NOT a security boundary -- the matching is fully client-side and trivially bypassable by anyone with browser DevTools. Real biometric confirmation for money would require server-side liveness detection, secure enclaves, and an actual authentication layer on top.
+### Console Modules:
+1. **Overview Dashboard**: Live KPIs (users, volume, completed transfers, suspicious events, pending investigations), 14-day volume timeline, and risk level distributions.
+2. **Fraud Intelligence**: Live assessment feed displaying risk score (0.00–1.00), risk tier (*Low*, *Medium*, *High*), triggered rules, drain ratio, and investigation triage dialogs.
+3. **Transaction Monitoring**: Complete transaction history with multi-criteria filters (risk tier, status, user, date range) and transaction detail modals.
+4. **User Surveillance**: Directory of accounts, balances, fraud flag counters, and one-click **Account Freeze** toggles.
+5. **Alerts Management**: Incident queue (`new`, `investigating`, `resolved`, `false_positive`) with persistent analyst notes and audit logs.
+6. **System Telemetry**: Real-time status of database WAL, fraud latency, API health, and multi-model cascade availability.
+7. **Admin AI Assistant**: Word-by-word streaming conversational assistant for natural queries against the live database (*"How many suspicious transactions today?"*, *"Which users have repeated flags?"*).
 
-### Model weights
+---
 
-The three face-api.js model files (~4.4 MB total) live in `frontend/public/models/face-api/`:
-
-| File                                | Purpose                                                |
-| ----------------------------------- | ------------------------------------------------------ |
-| `tiny_face_detector_model-*`        | Lightweight face detector (~190 KB).                   |
-| `face_landmark_68_tiny_model-*`     | 68-point landmark predictor for face alignment.        |
-| `face_recognition_model-*`          | Produces the 128-dim embedding used for matching.      |
-
-The `face_recognition_model` weights are split across **two shards** (`shard1` and `shard2`) -- both are required or the recognition net will fail with a tensor-shape error. The other two models are single-shard. To re-download (after a `face-api.js` upgrade), see `frontend/public/models/face-api/README.md`. The `Cache-Control: immutable, max-age=31536000` header in `next.config.js` keeps the browser from re-fetching these on every visit.
-
-## Project structure
+## Project Structure
 
 ```text
 wallet/
-├── README.md
-├── AUDIT.md
-├── AUDIT-2026-09-29.md
-├── .gitignore
+├── README.md                          Comprehensive system documentation
+├── AUDIT.md                           Security & code audit report
+├── docs/
+│   └── SCALING_ARCHITECTURE.md        Enterprise 1M+ user scaling roadmap
 ├── backend/
-│   ├── .env.example
 │   ├── requirements.txt
+│   ├── .env.example
 │   ├── app/
-│   │   ├── config.py        Environment configuration and model cascade
-│   │   ├── db.py            SQLAlchemy engine and SQLite migration bootstrap
-│   │   ├── engine.py        Atomic money engine and state machine
-│   │   ├── llm.py           Intent parsing, chat, and safe phrasing
-│   │   ├── main.py          FastAPI application and health checks
-│   │   ├── models.py        Users, accounts, transactions, requests, goals
-│   │   ├── resolver.py      Recipient and amount validation
-│   │   ├── schemas.py       API contracts
-│   │   ├── seed.py          Reproducible demo users and billers
-│   │   ├── voice_io.py      STT/TTS integrations
+│   │   ├── config.py                  Cascading models, timeouts & environment config
+│   │   ├── db.py                      SQLAlchemy engine & schema bootstrap
+│   │   ├── engine.py                  Atomic ledger mutations, states & freeze checks
+│   │   ├── llm.py                     Multi-model cascade (Ollama/Grok/OpenRouter), phrasing
+│   │   ├── main.py                    FastAPI application setup & lifecycle
+│   │   ├── models.py                  User, Account, Transaction, FraudAssessment, FraudAlert, etc.
+│   │   ├── resolver.py                Recipient handle & amount validation
+│   │   ├── schemas.py                 Pydantic API contracts
+│   │   ├── seed.py                    Demo users, billers, and admin account
+│   │   ├── services/
+│   │   │   ├── admin_ai.py            Grounded Admin AI with casual vs DB separation
+│   │   │   ├── categorizer.py         Transaction tagging background worker
+│   │   │   ├── financial_intelligence.py Health scores, velocity & recommendations
+│   │   │   └── fraud_engine.py        Hybrid rule + ML risk scoring engine
 │   │   └── routers/
-│   │       ├── accounts.py   Accounts, history, requests, savings goals, Face ID
-│   │       ├── agent.py      Chat, intent actions, review, confirmation
-│   │       └── voice.py      Audio transcription and server TTS trigger
+│   │       ├── accounts.py            Accounts, strictly-completed history, savings goals
+│   │       ├── admin.py               Admin auth, KPIs, fraud assessments, alerts, AI query
+│   │       ├── agent.py               Agent chat, act, confirm, review cards
+│   │       ├── insights.py            Tags, financial intelligence, recommendation advice
+│   │       └── voice.py               Whisper transcription & speech endpoints
 │   └── tests/
-│       ├── conftest.py
-│       ├── test_accounts.py
-│       ├── test_agent_chat.py
-│       ├── test_engine.py
-│       ├── test_face_endpoints.py
-│       └── test_llm_fallback.py
+│       ├── conftest.py                Isolated temporary test database fixture
+│       ├── test_accounts.py           History completion tests & counterparty verification
+│       ├── test_act_send.py           Send-money flow tests
+│       ├── test_act_split.py          Split payment tests
+│       ├── test_admin_and_fraud.py    Admin auth, fraud tiers, user freeze, Admin AI tests
+│       ├── test_agent_chat.py         Casual chat isolation & balance query tests
+│       ├── test_engine.py             Atomic balance mutations & insufficient funds tests
+│       └── test_financial_intelligence.py Health score, recommendations & advice tests
 └── frontend/
-    ├── package.json
-    ├── package-lock.json
-    ├── next.config.js
     ├── app/
-    │   ├── page.tsx          Main dashboard
-    │   ├── login/page.tsx    Demo user picker
-    │   ├── layout.tsx        Metadata and app shell
-    │   ├── globals.css       Theme and layout utilities
-    │   └── icon.svg          Wallet app icon
+    │   ├── page.tsx                   User dashboard (Wallet, Voice, Intelligence Layer)
+    │   ├── login/page.tsx             Demo user switch screen
+    │   ├── admin/
+    │   │   ├── page.tsx               Admin Intelligence Platform & live charts
+    │   │   └── login/page.tsx         Dedicated admin login screen
+    │   └── globals.css                Mauve/Plum and Peach glassmorphism styles
     ├── components/
-    │   ├── FaceIDEnroll.tsx  Webcam enrollment UI
-    │   ├── FaceIDConfirm.tsx Webcam verification UI
-    │   ├── SettingsModal.tsx Settings + Face ID management
-    │   └── ...                Dashboard, voice, split, savings, and forms
-    ├── hooks/
-    │   └── useVoiceLoop.ts   Wake-word -> STT -> agent -> confirm
+    │   ├── FinancialIntelligenceCard.tsx Health score, category bar, inline AI Guide
+    │   ├── HistoryList.tsx            Strictly-completed transaction history feed
+    │   ├── ChatBar.tsx                Voice/text input bar with typewriter response
+    │   ├── FaceIDEnroll.tsx           Webcam enrollment component
+    │   ├── FaceIDConfirm.tsx          Biometric verification modal
+    │   └── ReviewCard.tsx             Pre-confirmation transaction review card
     ├── lib/
-    │   ├── face.ts           Browser-side face detection (face-api.js)
-    │   ├── face-storage.ts   localStorage mirror for the embedding
-    │   ├── api.ts            Typed API client
-    │   └── speech.ts         TTS playback helper
-    ├── voice/
-    │   ├── openWakeWord.ts   Always-on wake-word listener
-    │   ├── MicCapture.ts     Microphone capture
-    │   ├── ConfirmListener.ts Yes/no confirmation capture
-    │   ├── sileroVAD.ts      Voice activity detection
-    │   └── voiceStore.ts     Voice state machine
-    └── public/
-        └── models/
-            ├── face-api/     face-api.js weights (3 models, ~4.4 MB)
-            ├── alexa_v0.1.onnx
-            ├── embedding_model.onnx
-            ├── melspectrogram.onnx
-            └── silero_vad.onnx
+    │   ├── api.ts                     Typed REST client for user and admin APIs
+    │   ├── speech.ts                  TTS speech playback helper
+    │   └── face.ts                    Client-side face-api.js detection
+    └── voice/
+        ├── openWakeWord.ts            "Hey Wallet" wake-word detector
+        └── ConfirmListener.ts         Voice "yes" / "no" confirmation listener
 ```
 
-## Requirements
+---
 
-- macOS, Linux, or Windows with Python 3.11+.
-- Node.js 18+ and npm.
-- Ollama for local AI conversation. The tested local model is `deepseek-coder-v2:16b`.
-- A browser with **microphone AND webcam** permissions for voice input and Face ID.
-- Optional: Edge TTS, Qwen3-TTS, or another configured TTS backend.
-- Optional: an OpenRouter API key for cloud conversational fallback.
+## Setup & Running
 
-The repository intentionally does not commit `backend/.venv`, `frontend/node_modules`, `.next`, `backend/.env`, or live SQLite WAL files. These are machine-specific, large, generated, or secret. The face-api.js and wake-word ONNX weights **are** committed so the demo works out-of-the-box.
-
-## Setup
-
-### Start Ollama
-
+### 1. Start Ollama (Local AI Model)
 ```bash
-ollama list
-ollama pull deepseek-coder-v2:16b
+ollama pull qwen2.5:7b
+# or: ollama pull deepseek-coder-v2:16b
+ollama serve
 ```
 
-The application uses DeepSeek first. OpenRouter free models are configured as a fallback list, but require an API key.
-
-### Start the backend
-
-You can start the backend using either the convenience script or manual commands:
-
-**Option 1: Quick start script (from repository root)**
-```bash
-./run_backend.sh
-# OR: npm run backend
-```
-
-**Option 2: Manual commands (from `backend` directory)**
+### 2. Start the Backend
 ```bash
 cd backend
 python3 -m venv .venv
-.venv/bin/python -m pip install --upgrade pip
-.venv/bin/pip install -r requirements.txt
+source .venv/bin/activate
+pip install -r requirements.txt
 cp .env.example .env
-.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+
+# Run uvicorn server from the backend directory:
+uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
 Health check:
-
 ```bash
 curl http://127.0.0.1:8000/health
 ```
 
-A healthy response includes `ollama_reachable: true` and your local model (e.g. `qwen2.5:7b`) in `llm_models_ready`.
-
-### Start the frontend
-
-In another terminal:
-
-**Option 1: Quick start script (from repository root)**
-```bash
-./run_frontend.sh
-# OR: npm run frontend
-```
-
-**Option 2: Manual commands (from `frontend` directory)**
+### 3. Start the Frontend
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-Open `http://localhost:3000`. If the port is occupied, Next.js prints another local port. On first visit the browser will download the face-api.js and wake-word model weights (~4.4 MB + ~3 MB, served from `/public/models/`). Subsequent visits hit the browser's immutable cache.
+Visit:
+- **User Wallet Dashboard**: `http://localhost:3000`
+- **Admin Intelligence Platform**: `http://localhost:3000/admin` (Login: `01926240062` / `1234`)
 
-## Admin Fraud Intelligence & Monitoring Platform
+---
 
-A dedicated, secure administrative dashboard is available at `http://localhost:3000/admin`.
+## API Overview
 
-- **Admin Login Route**: `/admin/login`
-- **Default Credentials**:
-  - **Phone**: `01926240062`
-  - **Password**: `1234`
-  - **Admin Name**: `talukder` (Super Admin)
-
-### Platform Modules:
-1. **Overview**: Real-time KPIs (registered users, active accounts, 14-day volume timeline, risk distribution).
-2. **Fraud Intelligence**: Live explainable assessment feed, risk scores (Low, Medium, High), triggered rules, and decision review workflows.
-3. **Transaction Monitoring**: Searchable transaction ledger with risk level filtering, counterparty tracking, and audit trails.
-4. **User Management**: Directory of users, balances, transaction counts, and one-click **Security Watch** or **Account Freeze** controls.
-5. **Alerts & Investigation**: Full triage board (`new`, `investigating`, `resolved`, `false_positive`) with investigation notes and security audit logs.
-6. **System Telemetry**: Real-time API uptime, SQLite WAL stats, Fraud Engine latency (~1.5ms), and AI model cascade availability.
-7. **Admin AI Assistant**: Direct live-database-grounded AI assistant for natural language intelligence ("How many suspicious transactions today?", "Which transactions have highest risk scores?", "Latest alerts").
-
-## How to use it
-
-Select a demo account, then use the text box, the waveform voice button, or the wake word.
-
-```text
-how are you
-check my balance
-show my recent transactions
-send 500 to rishad
-request 300 from bikash
-split 900 between rishad arman
-```
-
-Money actions create a review card first. Confirm with the button, say `yes`, or look at the camera for Face ID (if enrolled). Say `no` to cancel. Casual conversation does not create a financial action.
-
-### Face ID workflow
-
-1. Open Settings (gear icon) -> Face ID -> **Enroll**. Allow camera access, hold still, wait for the progress bar to fill, save.
-2. The next time a money action prompts for confirmation, the Face ID camera opens automatically. Look at the camera. On match (cosine similarity ≥ 0.6), the action proceeds.
-3. To remove Face ID for a user: Settings -> Face ID -> **Remove**.
-
-## Environment configuration
-
-Copy `backend/.env.example` to `backend/.env`.
-
-| Variable | Default | Purpose |
+### User & Transaction Endpoints
+| Endpoint | Method | Purpose |
 |---|---|---|
-| `OLLAMA_URL` | `http://localhost:11434` | Local Ollama endpoint |
-| `LLM_CASCADE` | `deepseek-coder-v2:16b` | Ordered local model cascade |
-| `OPENROUTER_API_KEY` | empty | Optional cloud fallback key |
-| `OPENROUTER_MODELS` | free model list | Cloud fallback models |
-| `DB_PATH` | `./wallet.db` | SQLite database path |
-| `PENDING_TTL_SECONDS` | `60` | Review expiry window |
-| `TTS_ENGINE` | `qwen` | `edge`, `qwen`, or `off` |
-| `STT_MODEL` | `base` | Faster Whisper model |
-| `STT_COMPUTE` | `int8` | Faster Whisper compute mode |
+| `GET /health` | `GET` | Health, model readiness, and cascade status |
+| `GET /users` | `GET` | Known users and contact directory |
+| `GET /users/{id}/history` | `GET` | Confirmed, completed ledger history (pending/cancelled excluded) |
+| `GET /users/{id}/requests` | `GET` | Incoming money requests pending user approval |
+| `GET /users/{id}/savings-goals`| `GET` | Festival savings pockets and progress |
+| `POST /users/{id}/savings-goals`| `POST` | Create a new festival savings goal |
+| `POST /users/{id}/savings-goals/{gid}/contribute` | `POST` | Contribute funds to a savings goal |
+| `GET /users/{id}/security-preference` | `GET` | User security transparency preference |
+| `POST /users/{id}/security-preference` | `POST` | Toggle explainable fraud analysis visibility |
+| `POST /agent/act` | `POST` | Parse natural command and create pending review card |
+| `POST /agent/confirm` | `POST` | Authorize and execute (or cancel) a pending transaction |
+| `POST /agent/chat` | `POST` | Casual conversation (0 DB overhead) or financial advice |
+| `POST /voice/transcribe` | `POST` | Faster-Whisper audio transcription |
 
-Frontend settings (Ollama URL, model cascade, OpenRouter key, TTS voice, STT model, Face ID) can be changed at runtime via the Settings modal and are persisted via `PATCH /settings`.
+### Financial Intelligence Endpoints
+| Endpoint | Method | Purpose |
+|---|---|---|
+| `GET /users/{id}/financial-intelligence` | `GET` | Health score, category breakdown, velocity, recommendations |
+| `POST /users/{id}/financial-intelligence/advice` | `POST` | Live-DB grounded actionable advice for a recommendation |
+| `GET /users/{id}/financial-literacy` | `GET` | Curated guides on emergency funds, 50/30/20 rule, savings |
 
-Never commit `backend/.env` or API keys.
+### Admin Intelligence Endpoints
+| Endpoint | Method | Purpose |
+|---|---|---|
+| `POST /admin/api/auth/login` | `POST` | Admin authentication and JWT token issuance |
+| `GET /admin/api/auth/me` | `GET` | Current authenticated admin session profile |
+| `GET /admin/api/overview` | `GET` | Live KPIs, volume timeline, risk distributions |
+| `GET /admin/api/fraud/assessments` | `GET` | Paginated fraud evaluation records with risk factors |
+| `GET /admin/api/fraud/alerts` | `GET` | Open fraud alerts and investigation tickets |
+| `PATCH /admin/api/fraud/alerts/{id}`| `PATCH` | Update alert triage status and investigation notes |
+| `POST /admin/api/users/{id}/freeze` | `POST` | Freeze or unfreeze an account from moving funds |
+| `POST /admin/api/ai/query` | `POST` | Live database-grounded query answering with cascade |
 
-## Tests and validation
+---
 
-Backend:
+## Testing & Quality Assurance
 
+Run the backend test suite:
 ```bash
 cd backend
-.venv/bin/python -m compileall -q app tests
-.venv/bin/python -m pytest -q
+.venv/bin/pytest -v
 ```
 
-Frontend:
-
+Verify the frontend production build:
 ```bash
 cd frontend
 npm run build
 ```
 
-The tests cover atomic transfers, insufficient funds, idempotency, expiry, split confirmation and cancellation, request payments, account history, balance timelines, chat fallback, factual response safety, and Face ID enrollment/status/remove endpoints.
-
-## API overview
-
-| Endpoint | Purpose |
-|---|---|
-| `GET /health` | Backend, Ollama, and model readiness |
-| `GET /users` | Demo users |
-| `GET /users/{id}/history` | Recent ledger activity and balance timeline |
-| `GET /users/{id}/requests` | Pending requests payable by the user |
-| `GET /users/{id}/savings-goals` | Festival savings goals |
-| `POST /users/{id}/savings-goals` | Create a savings goal |
-| `POST /users/{id}/savings-goals/{goal}/contribute` | Idempotent savings contribution |
-| `GET /users/{id}/face` | Face ID enrollment status |
-| `POST /users/{id}/face` | Enroll or re-enroll the 128-dim embedding |
-| `DELETE /users/{id}/face` | Remove Face ID for a user |
-| `POST /agent/act` | Parse and prepare an action |
-| `POST /agent/confirm` | Confirm or cancel a pending money action |
-| `POST /agent/chat` | Casual conversation and read-only questions |
-| `POST /voice/transcribe` | Convert browser audio to text |
-| `POST /voice/speak` | Trigger server-side TTS playback |
-
-## Recovery after deleting the project
-
-```bash
-git clone https://github.com/bikash-20/AI-AUTOMATED-MONEY-MOVEMENT-SYSTEM.git wallet
-cd wallet/backend
-python3 -m venv .venv
-.venv/bin/pip install -r requirements.txt
-cp .env.example .env
-cd ../frontend
-npm install
-```
-
-Then start Ollama, the backend, and the frontend using the commands above. The SQLite schema and seed users are recreated automatically. The model weights under `frontend/public/models/` are committed to the repository, so the first browser load is offline-capable. A deleted local database is runtime demo state; the application source and setup remain recoverable from Git.
-
-## Production readiness
-
-This repository is production-oriented for a local demo and development environment. Before handling real money, add real authentication, PostgreSQL, Alembic migrations, TLS, secure CORS, rate limiting, CSRF protection, secret management, durable queues, audit-log retention, backups, alerting, reconciliation, threat modeling, penetration testing, and compliance review. Face ID is a UX convenience for the demo, not a security boundary -- production biometric confirmation requires server-side liveness detection, secure enclaves, and an actual authentication layer.
-
-The deterministic transaction boundary and idempotency rules are the foundation for those next steps.
+---
 
 ## License
 
-No license has been selected yet. Add an explicit license before distributing this project publicly.
+Proprietary — All rights reserved. Developed by Bikash Talukder.

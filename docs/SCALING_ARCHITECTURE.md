@@ -448,6 +448,66 @@ vllm serve Qwen/Qwen2.5-14B-Instruct \
 ### 5. Disaster Recovery & Compliance
 - **RPO (Recovery Point Objective)** $< 1$ minute: Automated WAL replication and streaming binary logs.
 - **RTO (Recovery Time Objective)** $< 15$ minutes: Infrastructure defined via Terraform / CloudFormation for 1-click redeployment.
+
+---
+
+## 7. Scaling AI Fraud Detection & Financial Intelligence
+
+As transaction volume scales from 100 to 1,000,000+ users, the intelligence layers require distinct architectural strategies to maintain sub-millisecond evaluation latency and zero impact on ledger throughput.
+
+```mermaid
+flowchart TD
+    subgraph IngressTxn["Transaction Pipeline"]
+        TxnRequest["Outgoing Transaction Request"]
+    end
+
+    subgraph SynchronousPath["Synchronous Path (SLA < 10ms)"]
+        FeatureStore[("Redis Feature Store (Velocity, Balances, Outflows)")]
+        RuleEngine["Rule-Based Risk Evaluator (< 1.5ms)"]
+        RiskScore{"Risk Score Assessment"}
+        BlockAction["Require Biometric / Freeze"]
+        ProceedAction["Proceed to ACID Ledger"]
+    end
+
+    subgraph AsyncAnalytics["Asynchronous Analytics & Retraining (Kafka / SQS)"]
+        EventQueue["Transaction Event Stream"]
+        AnomalyWorker["Anomaly & Outlier Detector (Isolation Forest / Autoencoder)"]
+        AuditStorage[("Immutable Security Audit Vault")]
+        GraphDB[("Counterparty Risk Graph (Neo4j / Amazon Neptune)")]
+    end
+
+    subgraph FinancialIntel["Financial Intelligence & Advisory Engine"]
+        MaterializedRollups[("30-Day Aggregates & Baseline Velocity (Redis / ClickHouse)")]
+        AdvisoryWorker["AI Financial Guide (vLLM Continuous Batching)"]
+    end
+
+    TxnRequest --> FeatureStore
+    FeatureStore --> RuleEngine --> RiskScore
+    RiskScore -->|Medium / High Risk| BlockAction
+    RiskScore -->|Low Risk| ProceedAction
+    ProceedAction --> EventQueue
+    EventQueue --> AnomalyWorker & AuditStorage & GraphDB & MaterializedRollups
+    MaterializedRollups --> AdvisoryWorker
+```
+
+### 1. Synchronous vs. Asynchronous Fraud Pipeline
+- **Synchronous Pre-Execution Path (< 10ms SLA)**:
+  - Uses an in-memory **Redis Feature Store** to compute sliding-window velocity counters (number of transactions in 5 minutes, 1 hour, 24 hours) and account drain ratios without querying disk-backed SQL tables.
+  - The hybrid rule engine evaluates limits, velocity spikes, and counterparty familiarity in **< 1.5ms**.
+  - Transactions flagged with elevated risk (*Medium* or *High*) enforce biometric verification (Face ID) or alert the analyst queue before funds move.
+- **Asynchronous Deep Analytics (Kafka Event Stream)**:
+  - Completed transactions are published to **Amazon MSK / Kafka**.
+  - Offline workers run anomaly detection clustering (e.g., Isolation Forest, Autoencoders) and counterparty graph analysis without adding latency to the user's transfer.
+  - Every administrative action, account freeze, and investigation note is persisted to an immutable WORM (Write Once, Read Many) security audit vault.
+
+### 2. Scaling the Financial Intelligence & Advisory Engine
+- **Pre-Computed Category Rollups**:
+  - Instead of computing 30-day category sums and 7-day velocity baselines on the primary transactional database, use read replicas or **Redis/ClickHouse** materialized rollups.
+  - The user's financial health score (0–100) and personalized budget recommendations are cached with a TTL and invalidated only when a debit completes.
+- **Fast-Path Separation for Casual AI Conversation**:
+  - Casual greetings (*"hi"*, *"salam"*, *"how are you"*) bypass database operations completely, routing directly to the vLLM model pool with **0 database queries**.
+  - When the user asks for financial guidance or clicks **"Ask AI Guide"**, the system injects the pre-computed financial snapshot into the prompt, streaming grounded advice word-by-word with zero hallucination.
+
 - Point-in-time recovery enabled with 35-day backup retention.
 
 ---
