@@ -38,7 +38,7 @@ backend/.venv/bin/python backend/app/ml/train_eval.py
 **Empirical Benchmark Output Verified on Test Split**:
 - **LightGBM-Only**: PR-AUC = `0.8212`, Precision = `93.45%`, Recall = `70.72%`, F1 = `0.8051`, Total Cost = `৳585,550`
 - **Legacy Rules**: PR-AUC = `0.1475`, Precision = `2.03%`, Alerts Fired = `8,025`, Total Cost = `৳924,100`
-- **Cost Savings**: LightGBM saves **৳338,550 BDT** in false alarm review overhead.
+- **Cost Impact**: Reduces simulated false-alarm investigation overhead by **৳338,550 BDT** under standard benchmark assumptions (7,851 fewer false alarms on held-out test split).
 
 ### 3. Verify Frontend Production Build
 Validate Next.js 14 App Router compilation, TypeScript types, and static page rendering:

@@ -187,7 +187,7 @@ HTML_CONTENT = r"""<!DOCTYPE html>
       margin: 3px 0 5px 0;
     }
     th, td {
-      padding: 2.4px 5px;
+      padding: 2.2px 4.5px;
       border: 1px solid #cbd5e1;
       text-align: left;
     }
@@ -266,7 +266,7 @@ HTML_CONTENT = r"""<!DOCTYPE html>
         <div class="pillar-box pillar-2">
           <div class="pillar-header">What We Proved</div>
           <div class="pillar-content">
-            <strong>Empirical Data & Evaluation:</strong> LightGBM model trained on 300,000 synthetic BDT transactions (90 days, Asia/Dhaka time); achieved <strong>93.45% precision</strong>, <strong>70.72% recall</strong>, saving <strong>৳338,550</strong> in false alarm costs; <strong>140 passing automated tests</strong>.
+            <strong>Empirical Data & Evaluation:</strong> LightGBM model trained on 300,000 synthetic BDT transactions (90 days, Asia/Dhaka time); achieved <strong>93.45% precision</strong>, <strong>70.72% recall</strong>, reducing simulated false alarm overhead by <strong>৳338,550</strong>; <strong>140 passing automated tests</strong>.
           </div>
         </div>
         <div class="pillar-box pillar-3">
@@ -555,27 +555,27 @@ HTML_CONTENT = r"""<!DOCTYPE html>
             </tr>
           </tbody>
         </table>
-        <div style="padding: 3px 6px; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 4px; font-size: 7.2pt; color: #065f46;">
-          <strong>Empirical Verification Proof:</strong> Complete test suite of <strong>140 automated unit & scenario tests</strong> passes with <strong>100% success</strong> in <code>pytest</code> (zero regressions).
+        <div style="padding: 2.5px 5.5px; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 4px; font-size: 7.1pt; color: #065f46;">
+          <strong>Empirical Verification Proof:</strong> Complete test suite of <strong>140 automated unit &amp; scenario tests</strong> passes with <strong>100% success</strong> in <code>pytest</code> (zero regressions).
         </div>
       </div>
 
       <!-- 6. AI & Fraud Detection Methodology -->
-      <div class="section-title">6. AI & Fraud Detection Methodology: LightGBM vs. Rules vs. Hybrid</div>
-      <div style="font-size: 7.6pt; line-height: 1.3; color: #1e293b; margin-bottom: 4px;">
+      <div class="section-title">6. AI &amp; Fraud Detection Methodology: LightGBM vs. Rules vs. Hybrid</div>
+      <div style="font-size: 7.3pt; line-height: 1.25; color: #1e293b; margin-bottom: 3px;">
         <strong>Dataset Specification:</strong> 300,000 synthetic transactions across 2,000 users over 90 continuous days (Asia/Dhaka timezone). Modeled 5 realistic personas: Students (৳50–1.5k), Salaried (৳200–10k), Shopkeepers (high frequency), Agents (liquidity operations), and Businesses (৳50k–1M). Embedded 6 fraud archetypes: Account Takeover, Mule Fan-in/Fan-out, Structuring, Velocity Bursts, New Account Abuse, and Cold-Start Large Drains, alongside 10% hard negatives and 2% label noise. Split strictly temporally: <strong>70% Train (210,000)</strong>, <strong>15% Validation (45,000)</strong>, and <strong>15% Held-Out Test (45,000)</strong>.
       </div>
 
       <!-- Feature Engineering -->
-      <div class="card card-info" style="margin-bottom: 4px; padding: 4px 6px;">
-        <div style="font-size: 7.6pt; font-weight: 700; color: #1e40af; margin-bottom: 1.5px;">16 Causal Temporal Features (Zero Future Data Leakage)</div>
-        <div style="font-size: 7.1pt; color: #1e293b; line-height: 1.25;">
+      <div class="card card-info" style="margin-bottom: 3px; padding: 3px 5px;">
+        <div style="font-size: 7.4pt; font-weight: 700; color: #1e40af; margin-bottom: 1px;">16 Causal Temporal Features (Zero Future Data Leakage)</div>
+        <div style="font-size: 7.0pt; color: #1e293b; line-height: 1.22;">
           <code>amount_bdt</code>, <code>drain_ratio</code> (outflow / sender balance), <code>amount_to_avg_ratio</code> (vs. 30-day causal median), <code>has_history</code>, <code>txns_1h</code>, <code>txns_24h</code>, <code>sum_24h</code>, <code>is_new_recipient</code>, <code>rapid_seconds</code>, <code>is_night_hours</code> (00:00–05:00), <code>recipient_account_age_days</code>, <code>recipient_fan_in_count_24h</code>, <code>account_tier</code>, <code>is_trusted_recipient</code>, <code>recipient_registered_age_hours</code>, <code>txn_vs_tier_limit_ratio</code>.
         </div>
       </div>
 
       <!-- Comparison Table -->
-      <table style="margin-bottom: 4px;">
+      <table style="margin-bottom: 3.5px;">
         <thead>
           <tr>
             <th>System Strategy</th>
@@ -583,11 +583,11 @@ HTML_CONTENT = r"""<!DOCTYPE html>
             <th class="text-center">ROC-AUC</th>
             <th class="text-center">Precision</th>
             <th class="text-center">Recall</th>
-            <th class="text-center">F1 Score</th>
-            <th class="text-center">Alerts</th>
-            <th class="text-center">Missed Fraud Cost</th>
-            <th class="text-center">False Alarm Cost</th>
-            <th class="text-center">Total Cost</th>
+            <th class="text-center">F1</th>
+            <th class="text-center">Alerts (FP)</th>
+            <th class="text-center">Missed Cost (FN)</th>
+            <th class="text-center">Review Cost (FP)</th>
+            <th class="text-center">Total Cost Model</th>
           </tr>
         </thead>
         <tbody>
@@ -598,8 +598,8 @@ HTML_CONTENT = r"""<!DOCTYPE html>
             <td class="text-center text-danger font-bold">2.03%</td>
             <td class="text-center font-bold">73.42%</td>
             <td class="text-center">0.0395</td>
-            <td class="text-center text-danger font-bold">8,025</td>
-            <td class="text-center">৳531,000</td>
+            <td class="text-center text-danger font-bold">8,025 (7,862)</td>
+            <td class="text-center">৳531,000 <span style="font-size: 6pt; color: #64748b;">(59)</span></td>
             <td class="text-center text-danger font-bold">৳393,100</td>
             <td class="text-center text-danger font-bold">৳924,100</td>
           </tr>
@@ -610,53 +610,53 @@ HTML_CONTENT = r"""<!DOCTYPE html>
             <td class="text-center font-bold text-success">93.45%</td>
             <td class="text-center font-bold">70.72%</td>
             <td class="text-center font-bold text-success">0.8051</td>
-            <td class="text-center font-bold text-success">168</td>
-            <td class="text-center">৳585,000</td>
+            <td class="text-center font-bold text-success">168 (11)</td>
+            <td class="text-center">৳585,000 <span style="font-size: 6pt; color: #64748b;">(65)</span></td>
             <td class="text-center text-success font-bold">৳550</td>
             <td class="text-center text-success font-bold">৳585,550</td>
           </tr>
           <tr style="background: #f0fdf4;">
-            <td><strong>Refined Hybrid Engine</strong></td>
+            <td><strong>Refined Hybrid (ML + Hard Rules)*</strong></td>
             <td class="text-center font-bold text-primary">0.8212</td>
             <td class="text-center font-bold text-primary">0.9883</td>
             <td class="text-center font-bold text-primary">93.45%</td>
             <td class="text-center font-bold">70.72%</td>
             <td class="text-center font-bold text-primary">0.8051</td>
-            <td class="text-center font-bold text-primary">168</td>
-            <td class="text-center">৳585,000</td>
+            <td class="text-center font-bold text-primary">168 (11)</td>
+            <td class="text-center">৳585,000 <span style="font-size: 6pt; color: #64748b;">(65)</span></td>
             <td class="text-center text-primary font-bold">৳550</td>
             <td class="text-center text-primary font-bold">৳585,550</td>
           </tr>
         </tbody>
       </table>
-      <div style="font-size: 6.8pt; color: #64748b; margin-top: -3px; margin-bottom: 4px;">
-        *Cost model: Missed fraud = ৳9,000 avg loss; False alarm review = ৳50 investigator time. Evaluated on 45,000 held-out test transactions (222 actual frauds).
+      <div style="font-size: 6.6pt; color: #64748b; margin-top: -2px; margin-bottom: 4px; line-height: 1.24;">
+        *Cost model assumptions: Missed fraud = ৳9,000 avg loss; False alarm review = ৳50 investigator time (evaluated on 45,000 test transactions, 222 frauds). Why LightGBM & Hybrid match on this test split: In our synthetic split, LightGBM captured all 13 tier-cap violations. In production, Refined Hybrid retains regulatory hard rules as a zero-trust fail-safe against adversarial drift.
       </div>
 
       <!-- Key Insights & Archetype Breakdown -->
       <div class="grid-2" style="margin-bottom: 5px;">
         <div class="card" style="margin-bottom: 0;">
-          <div style="font-size: 7.7pt; font-weight: 700; color: #0f172a; margin-bottom: 2px;">Rule Demotion & Hybrid Optimization</div>
+          <div style="font-size: 7.7pt; font-weight: 700; color: #0f172a; margin-bottom: 2px;">Rule Demotion & Directional Cost Simulation</div>
           <div style="font-size: 7.3pt; line-height: 1.26; color: #334155;">
-            Our diagnosis revealed that legacy static rules fired <strong>7,862 false alarms</strong> (2.03% precision), suffocating operations. By demoting heuristic rules to Medium severity and preserving only regulatory hard caps (Tier Caps, Absolute Limit, New-Account Abuse), our Refined Hybrid matches LightGBM's <strong>93.45% precision</strong> while slashing review costs by <strong>৳338,550</strong>.
+            Our empirical diagnosis revealed that legacy static rules fired <strong>7,862 false alarms</strong> (2.03% precision), suffocating operations. By demoting heuristic rules to Medium severity and preserving only regulatory hard caps (Tier Caps, Absolute Limit, New-Account Abuse), our Refined Hybrid matches LightGBM's <strong>93.45% precision</strong> while slashing simulated review overhead by <strong>৳338,550</strong>. Actual production savings will scale with institutional labor costs.
           </div>
         </div>
-        <div class="card" style="margin-bottom: 0;">
+        <div class="card" style="margin-bottom: 0; padding: 4px 7px;">
           <div style="font-size: 7.7pt; font-weight: 700; color: #0f172a; margin-bottom: 2px;">Archetype Recall with 95% Bootstrap CIs</div>
-          <div style="font-size: 7.3pt; line-height: 1.26; color: #334155;">
+          <div style="font-size: 7.1pt; line-height: 1.24; color: #334155;">
             • <strong>Account Takeover:</strong> 66.0% recall [95% CI: 52.0% – 78.0%] (n=50)<br>
             • <strong>Cold-Start Large Drain:</strong> 100.0% recall [95% CI: 100% – 100%] (n=12*)<br>
             • <strong>Structuring (Smurfing):</strong> 88.9% recall [95% CI: 67.0% – 100%] (n=18*)<br>
             • <strong>Business Account Takeover:</strong> 96.0% recall [95% CI: 88.0% – 100%] (n=25*)<br>
-            <span style="font-size: 6.5pt; color: #64748b;">*Flagged as low-sample (&lt;30 test cases) per rigorous reporting standards.</span>
+            <span style="font-size: 6.4pt; color: #64748b;">*Flagged as low-sample (&lt;30 test cases) per rigorous reporting standards.</span>
           </div>
         </div>
       </div>
 
       <!-- Feature Ablation & Operational Inference Card -->
-      <div class="card card-highlight" style="margin-bottom: 0;">
-        <div style="font-size: 7.6pt; font-weight: 700; color: #14532d; margin-bottom: 1.5px;">Feature Ablation & Sub-Millisecond Production Inference Latency</div>
-        <div style="font-size: 7.2pt; line-height: 1.26; color: #166534;">
+      <div class="card card-highlight" style="margin-top: 3.5px; margin-bottom: 0; padding: 4px 7.5px;">
+        <div style="font-size: 7.5pt; font-weight: 700; color: #14532d; margin-bottom: 1px;">Feature Ablation & Sub-Millisecond Production Inference Latency</div>
+        <div style="font-size: 7.1pt; line-height: 1.24; color: #166534;">
           Ablation testing demonstrated that core transactional features alone (amount, drain ratio, velocity) achieved 74.2% F1. Adding our causal domain features (<code>is_trusted_recipient</code>, <code>txn_vs_tier_limit_ratio</code>, <code>recipient_registered_age_hours</code>) boosted F1 to <strong>80.51%</strong> (+6.3% lift). Model evaluation executes in <strong>0.72ms per transaction</strong> in Python/NumPy, satisfying the &lt;5ms FinTech authorization SLA without blocking payment flows.
         </div>
       </div>
