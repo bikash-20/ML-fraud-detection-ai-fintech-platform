@@ -436,6 +436,14 @@ class FraudEngine:
                 reasons.append("Sender account is currently flagged for heightened security monitoring.")
                 rule_score += 0.50
 
+            # Rule 6 (Demoted to Medium Severity): Velocity burst / Structuring
+            if features["txns_1h"] >= 3 and (features["rapid_seconds"] is not None and features["rapid_seconds"] < 600.0):
+                rules_triggered.append("RULE_VELOCITY_RAPID_BURST")
+                reasons.append(
+                    f"Velocity burst detected: {features['txns_1h']} outgoing transfers within the last hour ({int(features['rapid_seconds'])}s since prior transfer)."
+                )
+                rule_score = max(rule_score, 0.45)
+
             # =========================================================================
             # TRAINED LIGHTGBM ML MODEL INFERENCE (16 CAUSAL FEATURES)
             # =========================================================================
