@@ -283,7 +283,7 @@
         </div>
         <div style="font-size: 7.3pt; line-height: 1.25; color: #1e293b; margin-top: 2px;">
           <strong>Synergistic Solution Architecture:</strong> Our platform unites four essential financial pillars into a single autonomous engine:
-          <br>• <span style="color:#1d4ed8; font-weight:700;">Digital Finance:</span> Voice & chat-based payments (Send Money, Bill Split, Mobile Recharge, Cash Out) in natural Bangla/Banglish.
+          <br>• <span style="color:#1d4ed8; font-weight:700;">Digital Finance:</span> Voice & chat-based payments (Send Money, Request Money, Bill Split, Mobile Recharge, Cash Out) in natural Bangla/Banglish.
           <br>• <span style="color:#b91c1c; font-weight:700;">Fraud Detection:</span> Pre-execution LightGBM inference (&lt;0.8ms) with automated biometric step-up before balance mutations.
           <br>• <span style="color:#059669; font-weight:700;">Financial Literacy:</span> Autonomous 30-day categorization, velocity baselines, and proactive conversational spending insights.
           <br>• <span style="color:#7c3aed; font-weight:700;">Financial Inclusion:</span> Multi-persona tiers (Student, Salaried, Agent, Business) aligned with Bangladesh Bank regulations.
@@ -296,8 +296,8 @@
         <div class="card">
           <div style="font-size: 8pt; font-weight: 700; color: #0f172a; margin-bottom: 2px;">Conversational Voice & Transaction Engine</div>
           <ul>
-            <li><strong>Live DB-Grounded AI (User & Admin):</strong> LLM reads directly from the live database—answering spending, balances, and history for users, while answering real-time risk scores, alerts, and suspicious activity for admins with zero hallucinations.</li>
-            <li><strong>Voice & Money Movement:</strong> Natural voice/chat Send, Request, Bill Split, Mobile Recharge, and Cash Out with affirmative post-deduction balance display.</li>
+            <li><strong>Live DB-Grounded AI:</strong> LLM reads live DB for user balances/spending and admin triage with zero hallucinations; natural Bangla voice/chat intent parsing.</li>
+            <li><strong>Send, Request & Split Money:</strong> P2P transfers, bilateral <strong>Request Money</strong> (with payer notification inbox & 1-tap settlement approval), and atomic bill splits.</li>
             <li><strong>Dynamic Personas & Tiers:</strong> Configurable BDT limits for Students (৳500–8k), Salaried (৳10k–60k), Agents (৳100k–500k), and Businesses (৳500k–3M).</li>
           </ul>
         </div>
@@ -305,7 +305,7 @@
           <div style="font-size: 8pt; font-weight: 700; color: #0f172a; margin-bottom: 2px;">Autonomous Intelligence & Biometric Security</div>
           <ul>
             <li><strong>Real-Time Fraud Detection:</strong> LightGBM inference (&lt;0.8ms) across 16 causal temporal features; flags account takeover, smurfing, and drains.</li>
-            <li><strong>Biometric Step-Up (Face ID):</strong> In-browser 128-d neural face embeddings with liveness checks gating flagged transactions and device shifts.</li>
+            <li><strong>Biometric Step-Up (Face ID):</strong> In-browser 128-d neural face embeddings with liveness checks gating flagged transfers and device shifts.</li>
             <li><strong>Financial Intelligence Layer:</strong> Live 30-day spending rollups, savings goals tracker, and predictive budget warnings.</li>
           </ul>
         </div>
@@ -357,7 +357,7 @@
           <text x="254" y="54" text-anchor="middle" font-size="6.6" fill="#64748b">JWT, CORS, Idempotency Guard</text>
           <rect x="187" y="68" width="134" height="38" rx="4" fill="#ffffff" stroke="#e9d5ff"/>
           <text x="254" y="82" text-anchor="middle" font-size="7.6" font-weight="600" fill="#0f172a">Agent Intent Router</text>
-          <text x="254" y="94" text-anchor="middle" font-size="6.6" fill="#64748b">Affirmative Verbal Balance Sync</text>
+          <text x="254" y="94" text-anchor="middle" font-size="6.5" fill="#64748b">Send, Request, Split & Cash Out</text>
           <rect x="187" y="110" width="134" height="36" rx="4" fill="#ffffff" stroke="#e9d5ff"/>
           <text x="254" y="124" text-anchor="middle" font-size="7.6" font-weight="600" fill="#0f172a">Admin Security Controls</text>
           <text x="254" y="136" text-anchor="middle" font-size="6.6" fill="#64748b">Account Freeze & KYC Verif.</text>
@@ -516,7 +516,7 @@
             </tr>
             <tr>
               <td><strong>Atomic Debit/Credit</strong></td>
-              <td>Sender debit and recipient credit occur within the same atomic lock. Ledger invariant $\sum \Delta \text{Balance} = 0$ is guaranteed.</td>
+              <td>Sender debit and recipient credit occur within the same atomic lock (Send, Request settlement, Split). $\sum \Delta \text{Balance} = 0$ holds.</td>
               <td><code>test_act_send.py:test_act_send_success</code></td>
               <td class="text-center font-bold text-success">PASSED (100%)</td>
             </tr>
