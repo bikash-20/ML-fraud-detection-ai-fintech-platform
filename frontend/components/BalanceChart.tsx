@@ -34,16 +34,16 @@ export function BalanceChart({
           <XAxis
             dataKey="date"
             tickFormatter={(d) => d.slice(5)}
-            tick={{ fill: "#b8a8b8", fontSize: 11 }}
+            tick={{ fill: "#cec2ce", fontSize: 13, fontWeight: 500 }}
             axisLine={{ stroke: "rgba(255,255,255,0.1)" }}
             tickLine={false}
             minTickGap={28}
           />
           <YAxis
-            tick={{ fill: "#b8a8b8", fontSize: 11 }}
+            tick={{ fill: "#cec2ce", fontSize: 13, fontWeight: 500 }}
             axisLine={false}
             tickLine={false}
-            width={48}
+            width={56}
             tickFormatter={(v) => `${v.toLocaleString("en-IN")}`}
           />
           <Tooltip
@@ -51,8 +51,8 @@ export function BalanceChart({
               background: "rgba(45, 35, 48, 0.95)",
               border: "1px solid rgba(255,255,255,0.1)",
               borderRadius: 8,
-              color: "#f2e9e4",
-              fontSize: 12,
+              color: "#f7f0eb",
+              fontSize: 14,
             }}
             formatter={(v: number) => [`৳${v.toLocaleString("en-IN")}`, "Balance"]}
             labelFormatter={(d) => d}

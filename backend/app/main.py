@@ -117,9 +117,13 @@ app.add_middleware(
 )
 
 app.include_router(agent.router)
+app.include_router(agent.router, prefix="/api")
 app.include_router(accounts.router)
+app.include_router(accounts.router, prefix="/api")
 app.include_router(insights.router)
+app.include_router(insights.router, prefix="/api")
 app.include_router(voice.router)
+app.include_router(voice.router, prefix="/api")
 app.include_router(admin.router)
 
 

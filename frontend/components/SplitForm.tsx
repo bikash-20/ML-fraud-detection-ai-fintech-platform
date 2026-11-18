@@ -92,16 +92,16 @@ export function SplitForm({
     disabled || chosen.length < 2 || !amount || parseFloat(amount) <= 0;
 
   return (
-    <form onSubmit={handle} className="flex flex-col gap-3">
+    <form onSubmit={handle} className="flex flex-col gap-3.5">
       <div className="flex flex-col gap-2">
-        <span className="text-xs text-secondary uppercase tracking-wider">
+        <span className="text-xs text-secondary uppercase tracking-wider font-bold">
           People ({chosen.length}/{MAX_RECIPIENTS})
         </span>
         <div className="flex flex-wrap gap-2">
           {chosen.map((h) => (
             <span
               key={h}
-              className="inline-flex items-center gap-1.5 rounded-full bg-peach-500/15 text-peach-500 border border-peach-500/30 px-3 py-1 text-sm"
+              className="inline-flex items-center gap-1.5 rounded-full bg-peach-500/15 text-peach-500 border border-peach-500/30 px-3.5 py-1.5 text-sm font-semibold"
             >
               {h}
               <button
@@ -111,7 +111,7 @@ export function SplitForm({
                 onClick={() => remove(h)}
                 className="text-peach-500/70 hover:text-cream disabled:opacity-40"
               >
-                <X size={14} strokeWidth={2.2} />
+                <X size={15} strokeWidth={2.4} />
               </button>
             </span>
           ))}
@@ -123,15 +123,15 @@ export function SplitForm({
                 disabled={disabled}
                 aria-expanded={pickerOpen}
                 aria-haspopup="listbox"
-                className="inline-flex items-center gap-1 rounded-full bg-white/5 text-cream/80 hover:bg-white/10 border border-white/10 px-3 py-1 text-sm disabled:opacity-40"
+                className="inline-flex items-center gap-1 rounded-full bg-white/5 text-cream/90 hover:bg-white/10 border border-white/10 px-3.5 py-1.5 text-sm font-medium disabled:opacity-40"
               >
-                <Plus size={14} strokeWidth={2.2} />
+                <Plus size={15} strokeWidth={2.4} />
                 Add person
               </button>
               {pickerOpen ? (
                 <ul
                   role="listbox"
-                  className="absolute z-20 mt-1 left-0 min-w-[10rem] glass-strong rounded-xl p-1 shadow-glass"
+                  className="absolute z-20 mt-1 left-0 min-w-[11rem] glass-strong rounded-xl p-1.5 shadow-glass"
                 >
                   {remaining.map((r) => (
                     <li key={r}>
@@ -140,7 +140,7 @@ export function SplitForm({
                         role="option"
                         aria-selected="false"
                         onClick={() => add(r)}
-                        className="w-full text-left px-3 py-1.5 rounded-lg text-sm text-cream/90 hover:bg-white/10"
+                        className="w-full text-left px-3.5 py-2 rounded-lg text-sm font-medium text-cream hover:bg-white/10"
                       >
                         {r}
                       </button>
@@ -152,13 +152,13 @@ export function SplitForm({
           ) : null}
         </div>
         {chosen.length < 2 ? (
-          <p className="text-[11px] text-secondary">
+          <p className="text-xs text-secondary font-medium">
             Pick at least two people to split with.
           </p>
         ) : null}
       </div>
 
-      <label className="flex flex-col gap-1 text-xs text-secondary uppercase tracking-wider">
+      <label className="flex flex-col gap-1.5 text-xs text-secondary uppercase tracking-wider font-bold">
         Total amount (৳)
         <input
           type="number"
@@ -168,14 +168,14 @@ export function SplitForm({
           onChange={(e) => setAmount(e.target.value)}
           disabled={disabled}
           placeholder="900"
-          className="field-input text-lg font-semibold"
+          className="field-input text-xl font-bold py-2.5"
         />
       </label>
 
       {preview ? (
-        <div className="text-xs text-lavender">
+        <div className="text-sm text-lavender font-medium">
           ৳{preview.totalStr} ÷ {preview.n} ={" "}
-          <span className="text-cream font-medium">৳{preview.per}</span> each
+          <span className="text-cream font-bold">৳{preview.per}</span> each
           <span className="text-secondary">{preview.remainderNote}</span>
         </div>
       ) : null}
@@ -183,7 +183,7 @@ export function SplitForm({
       <button
         type="submit"
         disabled={submitDisabled}
-        className="btn-ghost rounded-lg px-4 py-2.5 disabled:opacity-40"
+        className="btn-ghost rounded-xl px-4 py-3 text-base font-bold disabled:opacity-40"
       >
         Split equally
       </button>

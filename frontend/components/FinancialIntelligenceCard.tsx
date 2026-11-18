@@ -163,13 +163,13 @@ export function FinancialIntelligenceCard({ userId, onAskAI }: Props) {
             <Sparkles className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="text-sm font-semibold tracking-wide text-white uppercase flex items-center gap-2">
+            <h3 className="text-base font-bold tracking-wide text-white uppercase flex items-center gap-2">
               Financial Intelligence Layer
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono font-medium lowercase">
+              <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono font-bold lowercase">
                 live
               </span>
             </h3>
-            <p className="text-xs text-white/50">
+            <p className="text-xs text-white/70 font-medium">
               Autonomous budget insights, risk scoring & financial literacy
             </p>
           </div>
@@ -178,37 +178,37 @@ export function FinancialIntelligenceCard({ userId, onAskAI }: Props) {
         <button
           onClick={fetchInsights}
           title="Refresh intelligence"
-          className="p-1.5 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+          className="p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
         >
           <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
         </button>
       </div>
 
       {/* Sub-Navigation Tabs */}
-      <div className="flex gap-2 p-1 bg-black/20 rounded-xl mb-5 text-xs font-medium border border-white/5">
+      <div className="flex gap-2 p-1.5 bg-black/20 rounded-xl mb-5 text-sm font-semibold border border-white/5">
         <button
           onClick={() => setActiveTab("overview")}
-          className={`flex-1 py-1.5 px-3 rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+          className={`flex-1 py-2 px-3 rounded-lg transition-all flex items-center justify-center gap-1.5 ${
             activeTab === "overview"
               ? "bg-gradient-to-r from-peach-500/20 to-purple-500/30 text-white border border-peach-500/30 shadow"
               : "text-white/60 hover:text-white"
           }`}
         >
-          <Activity className="w-3.5 h-3.5" />
+          <Activity className="w-4 h-4" />
           Health & Spending
         </button>
         <button
           onClick={() => setActiveTab("recommendations")}
-          className={`flex-1 py-1.5 px-3 rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+          className={`flex-1 py-2 px-3 rounded-lg transition-all flex items-center justify-center gap-1.5 ${
             activeTab === "recommendations"
               ? "bg-gradient-to-r from-peach-500/20 to-purple-500/30 text-white border border-peach-500/30 shadow"
               : "text-white/60 hover:text-white"
           }`}
         >
-          <Lightbulb className="w-3.5 h-3.5" />
+          <Lightbulb className="w-4 h-4" />
           Recommendations
           {data?.recommendations?.length ? (
-            <span className="w-4 h-4 rounded-full bg-peach-500/30 text-[10px] text-peach-200 flex items-center justify-center font-bold">
+            <span className="w-5 h-5 rounded-full bg-peach-500/30 text-xs text-peach-200 flex items-center justify-center font-bold">
               {data.recommendations.length}
             </span>
           ) : null}
@@ -266,47 +266,47 @@ export function FinancialIntelligenceCard({ userId, onAskAI }: Props) {
                 </span>
               </div>
               <div>
-                <div className="text-[10px] text-white/50 uppercase tracking-wider font-semibold">
+                <div className="text-xs text-white/70 uppercase tracking-wider font-bold">
                   Budget Health
                 </div>
-                <div className="text-sm font-semibold text-white">{rating}</div>
-                <div className="text-[11px] text-white/40">Scale of 0–100</div>
+                <div className="text-base font-bold text-white">{rating}</div>
+                <div className="text-xs text-white/50 font-medium">Scale of 0–100</div>
               </div>
             </div>
 
             {/* 30-Day Spending */}
             <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-              <div className="text-[10px] text-white/50 uppercase tracking-wider font-semibold">
+              <div className="text-xs text-white/70 uppercase tracking-wider font-bold">
                 30-Day Spending
               </div>
-              <div className="text-lg font-bold font-mono text-white mt-0.5">
+              <div className="text-xl font-extrabold font-mono text-white mt-1">
                 ৳{data?.total_spent_30d_bdt ?? "0.00"}
               </div>
-              <div className="text-[11px] text-white/40 mt-1">
+              <div className="text-xs text-white/50 mt-1 font-medium">
                 {data?.count_30d ?? 0} total debits recorded
               </div>
             </div>
 
             {/* 7-Day Velocity */}
             <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-              <div className="text-[10px] text-white/50 uppercase tracking-wider font-semibold flex items-center justify-between">
+              <div className="text-xs text-white/70 uppercase tracking-wider font-bold flex items-center justify-between">
                 <span>7-Day Velocity</span>
                 {velocity > 15 ? (
-                  <span className="text-rose-400 flex items-center gap-0.5 text-[10px]">
-                    <TrendingUp className="w-3 h-3" /> +{Math.round(velocity)}%
+                  <span className="text-rose-400 flex items-center gap-0.5 text-xs font-semibold">
+                    <TrendingUp className="w-3.5 h-3.5" /> +{Math.round(velocity)}%
                   </span>
                 ) : velocity < -10 ? (
-                  <span className="text-emerald-400 flex items-center gap-0.5 text-[10px]">
-                    <TrendingDown className="w-3 h-3" /> {Math.round(velocity)}%
+                  <span className="text-emerald-400 flex items-center gap-0.5 text-xs font-semibold">
+                    <TrendingDown className="w-3.5 h-3.5" /> {Math.round(velocity)}%
                   </span>
                 ) : (
-                  <span className="text-white/60 text-[10px]">Steady</span>
+                  <span className="text-white/70 text-xs font-medium">Steady</span>
                 )}
               </div>
-              <div className="text-lg font-bold font-mono text-white mt-0.5">
+              <div className="text-xl font-extrabold font-mono text-white mt-1">
                 ৳{data?.total_spent_7d_bdt ?? "0.00"}
               </div>
-              <div className="text-[11px] text-white/40 mt-1">
+              <div className="text-xs text-white/50 mt-1 font-medium">
                 {velocity > 20
                   ? "Elevated pace vs 30d baseline"
                   : velocity < -15
@@ -318,12 +318,12 @@ export function FinancialIntelligenceCard({ userId, onAskAI }: Props) {
 
           {/* Category Spend Distribution */}
           <div className="p-4 rounded-xl bg-white/5 border border-white/10 space-y-3">
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-semibold text-white/80 flex items-center gap-1.5">
-                <PieChart className="w-3.5 h-3.5 text-peach-300" />
+            <div className="flex items-center justify-between text-sm">
+              <span className="font-bold text-white/90 flex items-center gap-1.5">
+                <PieChart className="w-4 h-4 text-peach-300" />
                 Spending by Category (30 Days)
               </span>
-              <span className="text-[11px] text-white/40 font-mono">
+              <span className="text-xs text-white/50 font-mono font-medium">
                 {data?.category_breakdown?.length ?? 0} active tags
               </span>
             </div>
@@ -366,12 +366,12 @@ export function FinancialIntelligenceCard({ userId, onAskAI }: Props) {
                     return (
                       <div
                         key={cat.category}
-                        className="text-[11px] p-2 rounded-lg bg-black/20 border border-white/5 flex items-center justify-between"
+                        className="text-xs p-2.5 rounded-lg bg-black/20 border border-white/5 flex items-center justify-between"
                       >
-                        <span className={`font-medium capitalize ${colors[idx % colors.length]}`}>
+                        <span className={`font-semibold capitalize ${colors[idx % colors.length]}`}>
                           {cat.category}
                         </span>
-                        <span className="font-mono text-white/70">
+                        <span className="font-mono text-white/80 font-bold">
                           ৳{cat.amount_bdt}
                         </span>
                       </div>
@@ -380,7 +380,7 @@ export function FinancialIntelligenceCard({ userId, onAskAI }: Props) {
                 </div>
               </div>
             ) : (
-              <p className="text-xs text-white/40 italic py-2">
+              <p className="text-sm text-white/50 italic py-2">
                 No categorized spending recorded in the last 30 days.
               </p>
             )}
@@ -400,7 +400,7 @@ export function FinancialIntelligenceCard({ userId, onAskAI }: Props) {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                      className={`px-2.5 py-0.5 rounded text-xs font-bold uppercase tracking-wider ${
                         rec.priority === "high"
                           ? "bg-rose-500/20 text-rose-300 border border-rose-500/30"
                           : rec.priority === "medium"
@@ -410,25 +410,25 @@ export function FinancialIntelligenceCard({ userId, onAskAI }: Props) {
                     >
                       {rec.priority} priority
                     </span>
-                    <h4 className="text-xs font-semibold text-white">{rec.title}</h4>
+                    <h4 className="text-sm font-bold text-white">{rec.title}</h4>
                   </div>
-                  <span className="text-[10px] text-white/40 capitalize font-mono">
+                  <span className="text-xs text-white/50 capitalize font-mono font-medium">
                     {rec.category}
                   </span>
                 </div>
 
-                <p className="text-xs text-white/70 leading-relaxed">
+                <p className="text-sm text-white/80 leading-relaxed">
                   {rec.description}
                 </p>
 
                 <div className="pt-2 flex items-center justify-between border-t border-white/5">
-                  <span className="text-[10px] text-white/40 font-mono">
+                  <span className="text-xs text-white/50 font-mono">
                     Live DB Verified
                   </span>
                   <button
                     onClick={() => handleAskAIGuide(rec)}
                     disabled={adviceLoading && activeAdviceId === rec.id}
-                    className="text-[11px] px-3 py-1.5 rounded-lg bg-gradient-to-r from-peach-500/20 to-purple-500/20 hover:from-peach-500/30 hover:to-purple-500/30 text-peach-300 border border-peach-500/30 flex items-center gap-1.5 transition-all shadow-sm font-medium"
+                    className="text-xs px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-peach-500/20 to-purple-500/20 hover:from-peach-500/30 hover:to-purple-500/30 text-peach-300 border border-peach-500/30 flex items-center gap-1.5 transition-all shadow-sm font-bold"
                   >
                     <Sparkles
                       className={`w-3.5 h-3.5 text-peach-400 ${
@@ -449,10 +449,10 @@ export function FinancialIntelligenceCard({ userId, onAskAI }: Props) {
                 {activeAdviceId === rec.id && (
                   <div className="mt-3 p-3.5 rounded-xl bg-purple-950/40 border border-peach-500/30 space-y-2.5 backdrop-blur-md">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5 text-xs font-semibold text-peach-300">
-                        <Sparkles className="w-3.5 h-3.5 text-peach-400" />
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-peach-300">
+                        <Sparkles className="w-4 h-4 text-peach-400" />
                         <span>AI Financial Guide</span>
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono font-normal">
+                        <span className="text-xs px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono font-medium">
                           Live DB Grounded
                         </span>
                       </div>
@@ -460,32 +460,32 @@ export function FinancialIntelligenceCard({ userId, onAskAI }: Props) {
                         <button
                           onClick={() => speakText(adviceCache[rec.id].advice)}
                           title="Listen with voice"
-                          className="text-[10px] text-white/70 hover:text-white flex items-center gap-1 px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 transition-colors"
+                          className="text-xs text-white/80 hover:text-white flex items-center gap-1 px-2.5 py-1 rounded bg-white/5 hover:bg-white/10 transition-colors font-medium"
                         >
-                          <Volume2 className="w-3 h-3 text-peach-400" />
+                          <Volume2 className="w-3.5 h-3.5 text-peach-400" />
                           <span>Listen</span>
                         </button>
                       )}
                     </div>
 
                     {adviceLoading ? (
-                      <div className="flex items-center gap-2 text-xs text-peach-300/80 py-2 animate-pulse">
-                        <RefreshCw className="w-3.5 h-3.5 animate-spin text-peach-400" />
+                      <div className="flex items-center gap-2 text-xs text-peach-300/80 py-2 animate-pulse font-medium">
+                        <RefreshCw className="w-4 h-4 animate-spin text-peach-400" />
                         <span>Analyzing live transaction records & computing tailored plan…</span>
                       </div>
                     ) : adviceCache[rec.id] ? (
                       <div className="space-y-2.5">
-                        <p className="text-xs text-white/90 leading-relaxed font-sans">
+                        <p className="text-sm text-white/95 leading-relaxed font-sans font-medium">
                           {adviceCache[rec.id].streamingText || adviceCache[rec.id].advice}
                         </p>
                         {adviceCache[rec.id].steps && adviceCache[rec.id].steps.length > 0 && (
                           <div className="pt-2 border-t border-white/10 space-y-1.5">
-                            <div className="text-[10px] font-semibold text-white/50 uppercase tracking-wider">
+                            <div className="text-xs font-bold text-white/60 uppercase tracking-wider">
                               Actionable Roadmap:
                             </div>
                             <ul className="space-y-1">
                               {adviceCache[rec.id].steps.map((st, idx) => (
-                                <li key={idx} className="flex items-start gap-1.5 text-[11px] text-white/80">
+                                <li key={idx} className="flex items-start gap-1.5 text-xs text-white/90 font-medium">
                                   <span className="text-peach-400 font-bold shrink-0">•</span>
                                   <span>{st}</span>
                                 </li>
@@ -500,7 +500,7 @@ export function FinancialIntelligenceCard({ userId, onAskAI }: Props) {
               </div>
             ))
           ) : (
-            <div className="p-6 text-center text-xs text-white/50">
+            <div className="p-6 text-center text-sm text-white/60 font-medium">
               <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto mb-2 opacity-80" />
               Your finances look balanced! No urgent budget interventions needed.
             </div>
@@ -512,7 +512,7 @@ export function FinancialIntelligenceCard({ userId, onAskAI }: Props) {
       {activeTab === "literacy" && (
         <div className="space-y-4">
           {/* Topic Pills */}
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-2">
             {[
               { id: "emergency_fund", label: "Emergency Fund" },
               { id: "50_30_20", label: "50/30/20 Rule" },
@@ -523,10 +523,10 @@ export function FinancialIntelligenceCard({ userId, onAskAI }: Props) {
               <button
                 key={t.id}
                 onClick={() => loadLiteracy(t.id)}
-                className={`text-[11px] px-2.5 py-1 rounded-lg border transition-all ${
+                className={`text-xs px-3 py-1.5 rounded-lg border transition-all ${
                   selectedTopic === t.id
-                    ? "bg-peach-500/20 text-peach-200 border-peach-500/40 font-semibold"
-                    : "bg-white/5 text-white/60 border-white/10 hover:text-white"
+                    ? "bg-peach-500/20 text-peach-200 border-peach-500/40 font-bold shadow-sm"
+                    : "bg-white/5 text-white/70 border-white/10 hover:text-white font-medium"
                 }`}
               >
                 {t.label}
@@ -538,33 +538,33 @@ export function FinancialIntelligenceCard({ userId, onAskAI }: Props) {
           {literacyData && (
             <div className="p-4 rounded-xl bg-white/5 border border-white/10 space-y-3">
               <div>
-                <h4 className="text-sm font-semibold text-white flex items-center gap-2">
+                <h4 className="text-base font-bold text-white flex items-center gap-2">
                   <BookOpen className="w-4 h-4 text-peach-300" />
                   {literacyData.title ?? "Financial Literacy Guide"}
                 </h4>
-                <p className="text-xs text-white/50 mt-1">
+                <p className="text-xs text-white/60 mt-1 font-medium">
                   {literacyData.summary}
                 </p>
               </div>
 
               {literacyData.bangla_summary && (
-                <div className="p-2.5 rounded-lg bg-black/20 border border-white/5 text-xs text-peach-200/90 leading-relaxed font-sans">
+                <div className="p-3 rounded-lg bg-black/20 border border-white/5 text-xs text-peach-200 leading-relaxed font-sans font-medium">
                   💡 {literacyData.bangla_summary}
                 </div>
               )}
 
               {literacyData.details && (
-                <div className="text-xs text-white/70 leading-relaxed whitespace-pre-line border-t border-white/5 pt-2">
+                <div className="text-xs text-white/80 leading-relaxed whitespace-pre-line border-t border-white/5 pt-2 font-medium">
                   {literacyData.details}
                 </div>
               )}
 
               {literacyData.key_takeaways && (
                 <div className="space-y-1.5 pt-1">
-                  <div className="text-[10px] font-semibold text-white/50 uppercase tracking-wider">
+                  <div className="text-xs font-bold text-white/60 uppercase tracking-wider">
                     Key Principles
                   </div>
-                  <ul className="space-y-1 text-xs text-white/70 list-disc list-inside">
+                  <ul className="space-y-1 text-xs text-white/80 list-disc list-inside font-medium">
                     {literacyData.key_takeaways.map((item, idx) => (
                       <li key={idx}>{item}</li>
                     ))}

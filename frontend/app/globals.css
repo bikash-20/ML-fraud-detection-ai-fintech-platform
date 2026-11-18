@@ -8,15 +8,24 @@
   color-scheme: dark;
 }
 
+html {
+  font-size: 17.5px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
 html,
 body {
   background: #2d2330;
-  color: #f2e9e4;
+  color: #f7f0eb;
   font-family: "Inter", "SF Pro Display", system-ui, sans-serif;
   min-height: 100vh;
 }
 
 body {
+  font-size: 1.025rem;
+  line-height: 1.55;
   background-image: radial-gradient(at 0% 0%, rgba(107, 85, 112, 0.5) 0%, transparent 50%),
     radial-gradient(at 100% 100%, rgba(74, 59, 77, 0.7) 0%, transparent 50%),
     linear-gradient(135deg, #4a3b4d 0%, #6b5570 100%);
@@ -64,12 +73,30 @@ body {
     border-color: rgba(255, 255, 255, 0.2);
   }
   .text-secondary {
-    color: #b8a8b8;
+    color: #cec2ce;
   }
   .field-input,
   .field-select {
     @apply bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-cream focus:outline-none focus:border-peach-500/50 transition;
   }
+}
+
+/* Micro-typography elevation: ensure no micro-pixel text ever renders unreadably */
+.text-\[9px\] {
+  font-size: 0.8rem !important;
+  line-height: 1.2rem !important;
+}
+.text-\[10px\] {
+  font-size: 0.85rem !important;
+  line-height: 1.25rem !important;
+}
+.text-\[11px\] {
+  font-size: 0.9rem !important;
+  line-height: 1.35rem !important;
+}
+.text-\[12px\] {
+  font-size: 0.975rem !important;
+  line-height: 1.45rem !important;
 }
 
 /* Pulsing dot for mic active state */

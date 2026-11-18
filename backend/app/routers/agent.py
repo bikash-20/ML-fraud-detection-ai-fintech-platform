@@ -151,12 +151,14 @@ def agent_act(req: AgentActRequest) -> AgentActResponse:
             resulting = current_balance - existing.amount_bdt
             card = _review_card_for_send(existing, s)
             card.resulting_balance_bdt = resulting
+            sub_action = "recharge" if existing.note == "Mobile Recharge" else ("cash_out" if existing.note == "Cash Out via Agent" else "send")
             text = llm.phrase(
                 "review_send",
                 {
                     "amount_bdt": str(existing.amount_bdt),
                     "recipient": card.recipient_label,
                     "resulting_balance_bdt": str(resulting),
+                    "sub_action": sub_action,
                 },
             )
             return AgentActResponse(
@@ -248,6 +250,9 @@ def agent_act(req: AgentActRequest) -> AgentActResponse:
         if action == "budget_status":
             res = assistant_db.get_budget_status(s, req.user_id, intent_dict.get("festival"))
             return AgentActResponse(text=res["text"], action="budget_status", data=res)
+        if action == "account_limits":
+            res = assistant_db.get_user_limits_and_tier(s, req.user_id)
+            return AgentActResponse(text=res["text"], action="account_limits", data=res)
         if action == "financial_insights":
             from ..services import financial_intelligence
             res = financial_intelligence.calculate_financial_insights(s, req.user_id)
@@ -279,10 +284,28 @@ def agent_act(req: AgentActRequest) -> AgentActResponse:
 
         # Conversational / financial advisory query — ground with live database facts
         from ..services import financial_intelligence
+        from ..tier_config import get_effective_limits, get_effective_tier
         insights = financial_intelligence.calculate_financial_insights(s, req.user_id)
         current_balance = _post_debit_balance(s, req.user_id)
+        eff_tier = get_effective_tier(
+            getattr(user, "account_tier", None) or getattr(user, "tier", "personal"),
+            getattr(user, "kyc_status", "unverified"),
+        )
+        limits = get_effective_limits(
+            eff_tier,
+            getattr(user, "kyc_status", "unverified"),
+            custom_single=float(user.single_txn_limit) if getattr(user, "single_txn_limit", None) else None,
+            custom_daily=float(user.daily_limit) if getattr(user, "daily_limit", None) else None,
+            user_type=getattr(user, "user_type", None),
+        )
         user_facts = {
             "user_handle": user.handle,
+            "user_type": getattr(user, "user_type", "student"),
+            "account_tier": getattr(user, "account_tier", "personal"),
+            "effective_tier": eff_tier,
+            "kyc_status": getattr(user, "kyc_status", "unverified"),
+            "single_transfer_limit_bdt": float(limits["single_txn_limit"]),
+            "daily_transfer_limit_bdt": float(limits["daily_limit"]),
             "balance_bdt": float(current_balance),
             "spending_last_30_days_bdt": float(insights.get("total_spent_30d_bdt", "0").replace(",", "")),
             "spending_last_7_days_bdt": float(insights.get("total_spent_7d_bdt", "0").replace(",", "")),
@@ -359,6 +382,7 @@ def _handle_send(s, req, intent_dict, handles, user) -> AgentActResponse:
         resulting = current_balance - r.txn.amount_bdt
         card = _review_card_for_send(r.txn, s)
         card.resulting_balance_bdt = resulting
+        sub_act = intent_dict.get("sub_action") or ("recharge" if r.txn.note == "Mobile Recharge" else ("cash_out" if r.txn.note == "Cash Out via Agent" else "send"))
         return AgentActResponse(
             text=llm.phrase(
                 "review_send",
@@ -366,6 +390,7 @@ def _handle_send(s, req, intent_dict, handles, user) -> AgentActResponse:
                     "amount_bdt": str(r.txn.amount_bdt),
                     "recipient": card.recipient_label,
                     "resulting_balance_bdt": str(resulting),
+                    "sub_action": sub_act,
                 },
             ),
             card=card,
@@ -386,12 +411,14 @@ def _handle_send(s, req, intent_dict, handles, user) -> AgentActResponse:
 
     card = _review_card_for_send(txn, s)
     resulting = _post_debit_balance(s, user.id) - amount
+    sub_action = intent_dict.get("sub_action", "send")
     text = llm.phrase(
         "review_send",
         {
             "amount_bdt": str(amount),
             "recipient": recipient,
             "resulting_balance_bdt": str(resulting),
+            "sub_action": sub_action,
         },
     )
     # Patch the card with the correct post-debit balance.
@@ -457,9 +484,14 @@ def _handle_request_action(s, req, intent_dict, handles, user) -> AgentActRespon
         raise HTTPException(400, str(e))
 
     card = _review_card_for_request(req_row, s)
+    current_balance = _post_debit_balance(s, user.id)
     text = llm.phrase(
         "review_request",
-        {"amount_bdt": str(amount), "recipient": payer_handle},
+        {
+            "amount_bdt": str(amount),
+            "recipient": payer_handle,
+            "current_balance_bdt": str(current_balance),
+        },
     )
     return AgentActResponse(
         text=text,
@@ -1201,10 +1233,12 @@ def agent_confirm(req: AgentConfirmRequest) -> AgentConfirmResponse:
             }
         elif txn.kind == "send":
             kind = "executed_send"
+            sub_action = "recharge" if txn.note == "Mobile Recharge" else ("cash_out" if txn.note == "Cash Out via Agent" else "send")
             facts = {
                 "amount_bdt": str(txn.amount_bdt),
                 "recipient": recipient,
                 "new_balance_bdt": str(new_balance),
+                "sub_action": sub_action,
             }
         elif txn.kind == "bill":
             kind = "executed_bill"

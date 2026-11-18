@@ -78,8 +78,29 @@ class User(Base):
     face_enrolled_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     is_flagged: Mapped[bool] = mapped_column(default=False, server_default="0")
     is_frozen: Mapped[bool] = mapped_column(default=False, server_default="0")
+    tier: Mapped[str] = mapped_column(String(16), default="personal", server_default="personal")
+    account_tier: Mapped[str] = mapped_column(String(16), default="personal", server_default="personal")
+    user_type: Mapped[str] = mapped_column(String(32), default="student", server_default="student")
+    kyc_status: Mapped[str] = mapped_column(String(16), default="unverified", server_default="unverified")
+    business_name: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    daily_limit: Mapped[Optional[Decimal]] = mapped_column(Numeric(12, 2), nullable=True)
+    single_txn_limit: Mapped[Optional[Decimal]] = mapped_column(Numeric(12, 2), nullable=True)
+    requested_upgrade_tier: Mapped[Optional[str]] = mapped_column(String(16), nullable=True)
+    requested_upgrade_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
     account: Mapped["Account"] = relationship(back_populates="user", uselist=False)
+
+    @property
+    def effective_tier(self) -> str:
+        from .tier_config import get_effective_tier
+        return get_effective_tier(self.account_tier or self.tier, self.kyc_status)
+
+    @property
+    def masked_phone(self) -> str:
+        p = self.phone.strip()
+        if len(p) < 8:
+            return p
+        return f"{p[:4]}****{p[-3:]}"
 
     def __repr__(self) -> str:
         return f"<User {self.handle}>"
@@ -372,9 +393,11 @@ class FraudAlert(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     alert_type: Mapped[str] = mapped_column(String(64), nullable=False)
     severity: Mapped[str] = mapped_column(String(16), nullable=False)  # low, medium, high, critical
-    status: Mapped[str] = mapped_column(String(32), nullable=False, default="new")  # new, investigating, resolved, false_positive
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="new")  # new, investigating, confirmed_fraud, not_fraud, inconclusive, resolved, false_positive
     detection_reasons: Mapped[str] = mapped_column(Text, nullable=False)
     investigation_notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    resolution_reason_code: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)  # verified_legitimate, stolen_credentials, phishing_mule, friendly_fraud, etc.
+    is_confirmed_fraud: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)  # Ground-truth label for model retraining
     assigned_to_admin_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("admin_users.id"), nullable=True
     )

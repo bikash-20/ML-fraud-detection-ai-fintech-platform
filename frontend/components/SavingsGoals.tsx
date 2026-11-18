@@ -40,26 +40,26 @@ export function SavingsGoals({ userId }: { userId: number }) {
     <section className="glass rounded-2xl p-6">
       <div className="flex items-start justify-between gap-3 mb-4">
         <div>
-          <div className="text-secondary text-sm font-medium uppercase tracking-wider">Festival savings</div>
-          <p className="text-xs text-secondary mt-1">Set money aside for the days that matter.</p>
+          <div className="text-secondary text-sm font-bold uppercase tracking-wider">Festival savings</div>
+          <p className="text-xs sm:text-sm text-secondary mt-1 font-medium">Set money aside for the days that matter.</p>
         </div>
       </div>
       <div className="flex flex-wrap gap-2 mb-4">
-        <select value={festival} onChange={(e) => setFestival(e.target.value)} className="field-select flex-1 min-w-40">
+        <select value={festival} onChange={(e) => setFestival(e.target.value)} className="field-select flex-1 min-w-40 text-sm font-medium">
           {FESTIVALS.map((item) => <option key={item}>{item}</option>)}
         </select>
-        <input type="number" min="1" value={target} onChange={(e) => setTarget(e.target.value)} placeholder="Target ৳" className="field-input w-32" />
-        <button type="button" onClick={createGoal} disabled={!target || busy} className="btn-peach rounded-lg px-4 py-2 text-sm disabled:opacity-40">Create</button>
+        <input type="number" min="1" value={target} onChange={(e) => setTarget(e.target.value)} placeholder="Target ৳" className="field-input w-36 text-base font-bold" />
+        <button type="button" onClick={createGoal} disabled={!target || busy} className="btn-peach rounded-xl px-4 py-2.5 text-sm font-bold disabled:opacity-40">Create</button>
       </div>
       {error ? <p className="text-xs text-red-200 mb-3">{error}</p> : null}
       {goals.length ? <div className="grid gap-2 sm:grid-cols-2">{goals.map((goal) => {
         const progress = Math.min(100, Number(goal.saved_amount_bdt) / Number(goal.target_amount_bdt) * 100);
-        return <div key={goal.id} className="rounded-xl bg-white/5 border border-white/10 p-3">
-          <div className="flex justify-between text-sm"><span className="text-cream">{goal.festival}</span><span className="text-peach-500">{Math.round(progress)}%</span></div>
-          <div className="h-1.5 rounded-full bg-white/10 mt-2 overflow-hidden"><div className="h-full bg-peach-500 rounded-full" style={{ width: `${progress}%` }} /></div>
-          <div className="flex items-center justify-between mt-2 text-xs text-secondary"><span>৳{Number(goal.saved_amount_bdt).toLocaleString("en-IN")} / ৳{Number(goal.target_amount_bdt).toLocaleString("en-IN")}</span><button type="button" onClick={() => contribute(goal)} disabled={busy} className="text-peach-500 hover:text-cream">Add money</button></div>
+        return <div key={goal.id} className="rounded-xl bg-white/5 border border-white/10 p-3.5">
+          <div className="flex justify-between text-base font-semibold"><span className="text-cream">{goal.festival}</span><span className="text-peach-500 font-bold">{Math.round(progress)}%</span></div>
+          <div className="h-2 rounded-full bg-white/10 mt-2.5 overflow-hidden"><div className="h-full bg-peach-500 rounded-full" style={{ width: `${progress}%` }} /></div>
+          <div className="flex items-center justify-between mt-2.5 text-xs text-secondary font-medium"><span>৳{Number(goal.saved_amount_bdt).toLocaleString("en-IN")} / ৳{Number(goal.target_amount_bdt).toLocaleString("en-IN")}</span><button type="button" onClick={() => contribute(goal)} disabled={busy} className="text-sm font-bold text-peach-500 hover:text-cream">Add money</button></div>
         </div>;
-      })}</div> : <p className="text-sm text-secondary">No savings goals yet.</p>}
+      })}</div> : <p className="text-sm text-secondary font-medium">No savings goals yet.</p>}
     </section>
   );
 }

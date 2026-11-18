@@ -66,6 +66,77 @@ def init_db() -> None:
         _migrate_requests_idempotency_key()
         _migrate_users_face_columns()
         _migrate_users_security_columns()
+        _migrate_users_tier_column()
+        _migrate_user_types_and_tiers()
+        _migrate_fraud_alerts_resolution_columns()
+
+
+def _migrate_user_types_and_tiers() -> None:
+    """Add user_type, account_tier, kyc_status, business_name, and limit columns to users."""
+    columns = {column["name"] for column in inspect(_engine).get_columns("users")}
+    with _engine.begin() as connection:
+        if "account_tier" not in columns:
+            connection.execute(
+                text("ALTER TABLE users ADD COLUMN account_tier VARCHAR(16) NOT NULL DEFAULT 'personal'")
+            )
+            # Sync existing tier data if available
+            if "tier" in columns:
+                connection.execute(text("UPDATE users SET account_tier = tier WHERE tier IS NOT NULL"))
+        if "user_type" not in columns:
+            connection.execute(
+                text("ALTER TABLE users ADD COLUMN user_type VARCHAR(32) NOT NULL DEFAULT 'student'")
+            )
+        if "kyc_status" not in columns:
+            connection.execute(
+                text("ALTER TABLE users ADD COLUMN kyc_status VARCHAR(16) NOT NULL DEFAULT 'unverified'")
+            )
+        if "business_name" not in columns:
+            connection.execute(
+                text("ALTER TABLE users ADD COLUMN business_name VARCHAR(128) NULL")
+            )
+        if "daily_limit" not in columns:
+            connection.execute(
+                text("ALTER TABLE users ADD COLUMN daily_limit NUMERIC(12, 2) NULL")
+            )
+        if "single_txn_limit" not in columns:
+            connection.execute(
+                text("ALTER TABLE users ADD COLUMN single_txn_limit NUMERIC(12, 2) NULL")
+            )
+        if "requested_upgrade_tier" not in columns:
+            connection.execute(
+                text("ALTER TABLE users ADD COLUMN requested_upgrade_tier VARCHAR(16) NULL")
+            )
+        if "requested_upgrade_at" not in columns:
+            connection.execute(
+                text("ALTER TABLE users ADD COLUMN requested_upgrade_at DATETIME NULL")
+            )
+
+
+def _migrate_users_tier_column() -> None:
+    """Add tier column to users table if missing."""
+    columns = {column["name"] for column in inspect(_engine).get_columns("users")}
+    with _engine.begin() as connection:
+        if "tier" not in columns:
+            connection.execute(
+                text("ALTER TABLE users ADD COLUMN tier VARCHAR(16) NOT NULL DEFAULT 'personal'")
+            )
+
+
+def _migrate_fraud_alerts_resolution_columns() -> None:
+    """Add resolution_reason_code and is_confirmed_fraud columns to fraud_alerts if missing."""
+    insp = inspect(_engine)
+    if not insp.has_table("fraud_alerts"):
+        return
+    columns = {column["name"] for column in insp.get_columns("fraud_alerts")}
+    with _engine.begin() as connection:
+        if "resolution_reason_code" not in columns:
+            connection.execute(
+                text("ALTER TABLE fraud_alerts ADD COLUMN resolution_reason_code VARCHAR(64) NULL")
+            )
+        if "is_confirmed_fraud" not in columns:
+            connection.execute(
+                text("ALTER TABLE fraud_alerts ADD COLUMN is_confirmed_fraud BOOLEAN NULL")
+            )
 
 
 def _migrate_users_security_columns() -> None:

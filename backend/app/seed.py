@@ -21,15 +21,18 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
-# Order matters for stable phone numbers.
+DEMO_USER_SPECS: list[dict] = [
+    {"handle": "bikash", "display": "Bikash", "user_type": "student", "tier": "personal", "kyc": "verified", "balance": Decimal("5500.00"), "biz": None},
+    {"handle": "rishad", "display": "Rishad", "user_type": "salaried", "tier": "verified", "kyc": "verified", "balance": Decimal("42000.00"), "biz": None},
+    {"handle": "arman", "display": "Arman Store", "user_type": "shopkeeper", "tier": "verified", "kyc": "verified", "balance": Decimal("145000.00"), "biz": "Arman Grocery & Provisions"},
+    {"handle": "tahzib", "display": "Tahzib Agent Point", "user_type": "agent", "tier": "verified", "kyc": "verified", "balance": Decimal("320000.00"), "biz": "Tahzib Digital MFS Point"},
+    {"handle": "srijan", "display": "Srijan Enterprise", "user_type": "business", "tier": "business", "kyc": "verified", "balance": Decimal("1850000.00"), "biz": "Srijan Electronics & Trade Ltd"},
+    {"handle": "mahdin", "display": "Mahdin", "user_type": "student", "tier": "personal", "kyc": "unverified", "balance": Decimal("2400.00"), "biz": None},
+    {"handle": "rahim", "display": "Rahim Traders", "user_type": "business", "tier": "personal", "kyc": "unverified", "balance": Decimal("75000.00"), "biz": "Rahim Agro Commodities"},
+]
+
 DEMO_USERS: list[tuple[str, str]] = [
-    ("bikash", "Bikash"),
-    ("rishad", "Rishad"),
-    ("arman", "Arman"),
-    ("rahim", "Rahim"),
-    ("tahzib", "Tahzib"),
-    ("srijan", "Srijan"),
-    ("mahdin", "Mahdin"),
+    (spec["handle"], spec["display"]) for spec in DEMO_USER_SPECS
 ]
 
 DEMO_BILLERS: list[tuple[str, str, str]] = [
@@ -53,24 +56,50 @@ def seed(session: Session) -> dict:
     rng = random.Random(20260922)  # fixed seed -> reproducible phone numbers
 
     user_count = 0
-    for handle, display in DEMO_USERS:
+    for spec in DEMO_USER_SPECS:
+        handle = spec["handle"]
+        display = spec["display"]
         existing = session.query(User).filter_by(handle=handle).one_or_none()
         if existing:
+            # Sync user type and tier attributes if missing
+            if not getattr(existing, "user_type", None) or existing.user_type == "student":
+                existing.user_type = spec["user_type"]
+                existing.account_tier = spec["tier"]
+                existing.tier = spec["tier"]
+                existing.kyc_status = spec["kyc"]
+                existing.display_name = spec["display"]
+                existing.business_name = spec["biz"]
             continue
         user = User(
             handle=handle,
             display_name=display,
             phone=_bd_phone(rng),
+            user_type=spec["user_type"],
+            account_tier=spec["tier"],
+            tier=spec["tier"],
+            kyc_status=spec["kyc"],
+            business_name=spec["biz"],
         )
         session.add(user)
         session.flush()
-        # Seed balance: bikash rich, everyone else 10k.
-        balance = (
-            Decimal(config.SEED_BALANCE_BIKASH)
-            if handle == "bikash"
-            else Decimal(config.SEED_BALANCE_DEFAULT)
-        )
-        session.add(Account(user_id=user.id, balance_bdt=balance))
+        balance = spec["balance"]
+        acct = Account(user_id=user.id, balance_bdt=balance)
+        session.add(acct)
+        session.flush()
+
+        # Create opening cash_in ledger transaction
+        session.add(Transaction(
+            idempotency_key=f"seed-opening-{user.id}-{int(_utcnow().timestamp())}",
+            initiator_user_id=user.id,
+            from_account_id=None,
+            to_account_id=acct.id,
+            amount_bdt=balance,
+            kind="cash_in",
+            status="completed",
+            note=f"Initial {spec['user_type'].capitalize()} Deposit",
+            created_at=_utcnow(),
+            completed_at=_utcnow(),
+        ))
         user_count += 1
 
     biller_count = 0

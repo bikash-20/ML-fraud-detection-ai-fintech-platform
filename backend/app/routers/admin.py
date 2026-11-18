@@ -9,7 +9,7 @@ import json
 import logging
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
@@ -41,6 +41,12 @@ from ..services.admin_auth import (
     revoke_admin_token,
     verify_password,
 )
+from ..tier_config import (
+    TIER_BASELINE_FALLBACKS,
+    TIER_LIMITS,
+    get_effective_limits,
+    get_effective_tier,
+)
 
 log = logging.getLogger("wallet.admin_api")
 
@@ -63,13 +69,39 @@ class AdminReviewAssessmentRequest(BaseModel):
 
 
 class AdminUpdateAlertRequest(BaseModel):
-    status: str = Field(..., description="new | investigating | resolved | false_positive")
+    status: str = Field(
+        ...,
+        description="new | investigating | confirmed_fraud | not_fraud | inconclusive | resolved | false_positive"
+    )
+    reason_code: Optional[str] = Field(
+        None,
+        description="Mandatory reason code when closing alert: verified_legitimate | stolen_credentials | phishing_mule | friendly_fraud | unauthorized_device | inconclusive_evidence"
+    )
     notes: Optional[str] = None
     assign_to_me: bool = False
 
 
 class AdminUserActionRequest(BaseModel):
     reason: Optional[str] = None
+
+
+class AdminUserKYCRequest(BaseModel):
+    kyc_status: Literal["verified", "unverified"] = Field(..., description="verified | unverified")
+    notes: Optional[str] = None
+    activate_requested_tier: bool = True
+
+
+class AdminUserTierChangeRequest(BaseModel):
+    account_tier: Literal["personal", "verified", "business"] = Field(..., description="personal | verified | business")
+    reason_code: str = Field(
+        ...,
+        min_length=3,
+        description="Mandatory reason code: kyc_documents_verified | trade_license_approved | tin_bin_validated | risk_downgrade | compliance_review | manual_override",
+    )
+    notes: Optional[str] = None
+    user_type: Optional[str] = None
+    single_txn_limit: Optional[float] = None
+    daily_limit: Optional[float] = None
 
 
 class AdminAIQueryRequest(BaseModel):
@@ -438,6 +470,27 @@ def review_fraud_assessment(
     return {"success": True, "assessment_id": a.id, "new_status": a.status}
 
 
+_LEGACY_MIGRATION_CUTOFF = datetime(2026, 11, 18, 0, 0, 0)
+
+
+def _check_legacy_test_data(
+    handle: Optional[str],
+    created_at: Optional[datetime],
+    amount_bdt: Optional[float] = None,
+    reasons: Optional[str] = None,
+) -> tuple[bool, Optional[str]]:
+    """Flag pre-migration prototype test data (e.g. ৳45k drain alerts on @bikash) so student profile is transparent."""
+    if handle == "bikash":
+        is_legacy = (
+            (created_at and created_at < _LEGACY_MIGRATION_CUTOFF)
+            or (amount_bdt is not None and amount_bdt > 10_000.0)
+            or (bool(reasons and "45,000" in reasons))
+        )
+        if is_legacy:
+            return True, "Pre-migration test simulation before student profile calibration (does not reflect live student limits)."
+    return False, None
+
+
 # ---- Section C: Transaction Monitoring -------------------------------------
 @router.get("/transactions")
 def list_transactions(
@@ -514,6 +567,12 @@ def list_transactions(
             .first()
         )
 
+        is_legacy, legacy_exp = _check_legacy_test_data(
+            sender.handle if sender else None,
+            t.created_at,
+            amount_bdt=float(t.amount_bdt),
+        )
+
         items.append({
             "id": t.id,
             "kind": t.kind,
@@ -524,6 +583,8 @@ def list_transactions(
             "note": t.note,
             "created_at": t.created_at.isoformat(),
             "completed_at": t.completed_at.isoformat() if t.completed_at else None,
+            "is_legacy_test_data": is_legacy,
+            "legacy_explanation": legacy_exp,
             "fraud_assessment": {
                 "id": assessment.id,
                 "risk_score": assessment.risk_score,
@@ -623,6 +684,10 @@ def list_users(
     users = q.order_by(User.id.asc()).all()
 
     items = []
+    now = _utcnow()
+    t30 = now - timedelta(days=30)
+    import numpy as np
+
     for u in users:
         acct = session.query(Account).filter_by(user_id=u.id).first()
         bal = float(acct.balance_bdt) if acct else 0.0
@@ -630,21 +695,277 @@ def list_users(
         alert_count = session.query(FraudAlert).filter_by(user_id=u.id).count()
         total_txns = session.query(Transaction).filter_by(initiator_user_id=u.id).count()
 
+        eff_tier = get_effective_tier(
+            getattr(u, "account_tier", None) or getattr(u, "tier", "personal"),
+            getattr(u, "kyc_status", "unverified"),
+        )
+        limits = get_effective_limits(
+            eff_tier,
+            getattr(u, "kyc_status", "unverified"),
+            custom_single=float(u.single_txn_limit) if getattr(u, "single_txn_limit", None) else None,
+            custom_daily=float(u.daily_limit) if getattr(u, "daily_limit", None) else None,
+            user_type=getattr(u, "user_type", None),
+        )
+
+        # Compute 30-day baseline median
+        past_amounts = []
+        if acct:
+            res_30d = (
+                session.query(Transaction.amount_bdt)
+                .filter(
+                    Transaction.from_account_id == acct.id,
+                    Transaction.status == TxnStatus.COMPLETED.value,
+                    Transaction.created_at >= t30,
+                )
+                .all()
+            )
+            past_amounts = [float(r[0]) for r in res_30d if r[0] is not None]
+
+        if len(past_amounts) >= 5:
+            baseline_med = float(np.median(past_amounts))
+        else:
+            baseline_med = TIER_BASELINE_FALLBACKS.get(eff_tier, 1000.0)
+
         items.append({
             "id": u.id,
             "handle": u.handle,
             "display_name": u.display_name,
             "phone": u.phone,
+            "masked_phone": u.masked_phone,
+            "user_type": getattr(u, "user_type", "student") or "student",
+            "account_tier": getattr(u, "account_tier", "personal") or getattr(u, "tier", "personal") or "personal",
+            "effective_tier": eff_tier,
+            "kyc_status": getattr(u, "kyc_status", "unverified") or "unverified",
+            "business_name": getattr(u, "business_name", None),
             "balance_bdt": bal,
+            "baseline_median_30d": round(baseline_med, 2),
+            "single_txn_limit": float(limits["single_txn_limit"]),
+            "daily_limit": float(limits["daily_limit"]),
             "total_transactions": total_txns,
             "fraud_alerts_count": alert_count,
             "face_enrolled": bool(u.face_embedding is not None),
             "is_flagged": getattr(u, "is_flagged", False),
             "is_frozen": getattr(u, "is_frozen", False),
+            "requested_upgrade_tier": getattr(u, "requested_upgrade_tier", None),
+            "requested_upgrade_at": u.requested_upgrade_at.isoformat() if getattr(u, "requested_upgrade_at", None) else None,
             "created_at": u.created_at.isoformat(),
         })
 
     return {"users": items, "count": len(items)}
+
+
+@router.get("/users/{user_id}")
+def get_admin_user(
+    user_id: int,
+    admin: AdminUser = Depends(get_current_admin),
+    session: Session = Depends(get_session),
+) -> dict:
+    """Detailed user view for admin drawer with alerts and transaction history."""
+    u = session.get(User, user_id)
+    if not u:
+        raise HTTPException(404, "User not found")
+
+    acct = session.query(Account).filter_by(user_id=u.id).first()
+    bal = float(acct.balance_bdt) if acct else 0.0
+
+    eff_tier = get_effective_tier(
+        getattr(u, "account_tier", None) or getattr(u, "tier", "personal"),
+        getattr(u, "kyc_status", "unverified"),
+    )
+    limits = get_effective_limits(
+        eff_tier,
+        getattr(u, "kyc_status", "unverified"),
+        custom_single=float(u.single_txn_limit) if getattr(u, "single_txn_limit", None) else None,
+        custom_daily=float(u.daily_limit) if getattr(u, "daily_limit", None) else None,
+        user_type=getattr(u, "user_type", None),
+    )
+
+    # Recent transactions
+    recent_txns = []
+    if acct:
+        from sqlalchemy import desc
+        txns = (
+            session.query(Transaction)
+            .filter(
+                or_(
+                    Transaction.from_account_id == acct.id,
+                    Transaction.to_account_id == acct.id,
+                )
+            )
+            .order_by(desc(Transaction.id))
+            .limit(10)
+            .all()
+        )
+        for t in txns:
+            is_leg, leg_exp = _check_legacy_test_data(u.handle, t.created_at, amount_bdt=float(t.amount_bdt))
+            recent_txns.append({
+                "id": t.id,
+                "amount_bdt": float(t.amount_bdt),
+                "kind": t.kind,
+                "status": t.status,
+                "is_legacy_test_data": is_leg,
+                "legacy_explanation": leg_exp,
+                "created_at": t.created_at.isoformat(),
+            })
+
+    # Recent alerts
+    alerts = (
+        session.query(FraudAlert)
+        .filter_by(user_id=u.id)
+        .order_by(FraudAlert.id.desc())
+        .limit(10)
+        .all()
+    )
+    recent_alerts = []
+    for a in alerts:
+        is_leg, leg_exp = _check_legacy_test_data(u.handle, a.created_at, reasons=a.detection_reasons)
+        recent_alerts.append({
+            "id": a.id,
+            "alert_type": a.alert_type,
+            "severity": a.severity,
+            "status": a.status,
+            "is_legacy_test_data": is_leg,
+            "legacy_explanation": leg_exp,
+            "detection_reasons": a.detection_reasons,
+            "created_at": a.created_at.isoformat(),
+        })
+
+    return {
+        "id": u.id,
+        "handle": u.handle,
+        "display_name": u.display_name,
+        "phone": u.phone,
+        "masked_phone": u.masked_phone,
+        "user_type": getattr(u, "user_type", "student") or "student",
+        "account_tier": getattr(u, "account_tier", "personal") or getattr(u, "tier", "personal") or "personal",
+        "effective_tier": eff_tier,
+        "kyc_status": getattr(u, "kyc_status", "unverified") or "unverified",
+        "business_name": getattr(u, "business_name", None),
+        "balance_bdt": bal,
+        "single_txn_limit": float(limits["single_txn_limit"]),
+        "daily_limit": float(limits["daily_limit"]),
+        "is_flagged": getattr(u, "is_flagged", False),
+        "is_frozen": getattr(u, "is_frozen", False),
+        "requested_upgrade_tier": getattr(u, "requested_upgrade_tier", None),
+        "requested_upgrade_at": u.requested_upgrade_at.isoformat() if getattr(u, "requested_upgrade_at", None) else None,
+        "created_at": u.created_at.isoformat(),
+        "recent_transactions": recent_txns,
+        "recent_alerts": recent_alerts,
+    }
+
+
+@router.patch("/users/{user_id}/kyc")
+def admin_verify_kyc(
+    user_id: int,
+    req: AdminUserKYCRequest,
+    admin: AdminUser = Depends(get_current_admin),
+    session: Session = Depends(get_session),
+) -> dict:
+    """Admin action: Verify or unverify user KYC status.
+
+    Security rule:
+    When verified, if an upgrade request was pending (e.g. to business or verified),
+    the tier is activated. Audit log is written.
+    """
+    u = session.get(User, user_id)
+    if not u:
+        raise HTTPException(404, "User not found")
+
+    old_kyc = getattr(u, "kyc_status", "unverified")
+    old_tier = getattr(u, "account_tier", "personal")
+    u.kyc_status = req.kyc_status
+
+    tier_changed = False
+    if req.kyc_status == "verified" and req.activate_requested_tier and u.requested_upgrade_tier:
+        u.account_tier = u.requested_upgrade_tier
+        u.tier = u.requested_upgrade_tier
+        u.requested_upgrade_tier = None
+        tier_changed = True
+
+    audit = SecurityAuditLog(
+        admin_id=admin.id,
+        action="verify_user_kyc" if req.kyc_status == "verified" else "unverify_user_kyc",
+        target_type="user",
+        target_id=str(u.id),
+        details_json=json.dumps({
+            "old_kyc": old_kyc,
+            "new_kyc": req.kyc_status,
+            "tier_changed": tier_changed,
+            "old_tier": old_tier,
+            "new_tier": u.account_tier,
+            "notes": req.notes,
+        }),
+    )
+    session.add(audit)
+    session.commit()
+
+    return {
+        "success": True,
+        "user_id": u.id,
+        "kyc_status": u.kyc_status,
+        "account_tier": u.account_tier,
+        "effective_tier": u.effective_tier,
+    }
+
+
+@router.patch("/users/{user_id}/tier")
+def admin_change_tier(
+    user_id: int,
+    req: AdminUserTierChangeRequest,
+    admin: AdminUser = Depends(get_current_admin),
+    session: Session = Depends(get_session),
+) -> dict:
+    """Admin action: Change account tier with MANDATORY reason code. Audit logged."""
+    if not req.reason_code or not req.reason_code.strip():
+        raise HTTPException(422, "Mandatory reason_code required when updating account tier.")
+
+    u = session.get(User, user_id)
+    if not u:
+        raise HTTPException(404, "User not found")
+
+    old_tier = getattr(u, "account_tier", "personal")
+    u.account_tier = req.account_tier
+    u.tier = req.account_tier
+
+    if req.user_type:
+        u.user_type = req.user_type
+
+    if req.single_txn_limit is not None and req.single_txn_limit > 0:
+        u.single_txn_limit = Decimal(str(req.single_txn_limit))
+    if req.daily_limit is not None and req.daily_limit > 0:
+        u.daily_limit = Decimal(str(req.daily_limit))
+
+    # If tier changed to business or verified, ensure KYC status reflects administrative approval
+    if req.account_tier in ("verified", "business"):
+        u.kyc_status = "verified"
+
+    u.requested_upgrade_tier = None
+
+    audit = SecurityAuditLog(
+        admin_id=admin.id,
+        action="change_user_tier",
+        target_type="user",
+        target_id=str(u.id),
+        details_json=json.dumps({
+            "old_tier": old_tier,
+            "new_tier": req.account_tier,
+            "reason_code": req.reason_code,
+            "notes": req.notes,
+            "single_txn_limit": float(u.single_txn_limit) if u.single_txn_limit else None,
+            "daily_limit": float(u.daily_limit) if u.daily_limit else None,
+        }),
+    )
+    session.add(audit)
+    session.commit()
+
+    return {
+        "success": True,
+        "user_id": u.id,
+        "account_tier": u.account_tier,
+        "kyc_status": u.kyc_status,
+        "effective_tier": u.effective_tier,
+        "reason_code": req.reason_code,
+    }
 
 
 @router.post("/users/{user_id}/flag")
@@ -731,6 +1052,13 @@ def list_fraud_alerts(
         txn = session.get(Transaction, a.txn_id) if a.txn_id else None
         assigned = session.get(AdminUser, a.assigned_to_admin_id) if a.assigned_to_admin_id else None
 
+        is_leg, leg_exp = _check_legacy_test_data(
+            u.handle if u else None,
+            a.created_at,
+            amount_bdt=float(txn.amount_bdt) if txn else None,
+            reasons=a.detection_reasons,
+        )
+
         items.append({
             "id": a.id,
             "assessment_id": a.assessment_id,
@@ -739,8 +1067,12 @@ def list_fraud_alerts(
             "alert_type": a.alert_type,
             "severity": a.severity,
             "status": a.status,
+            "is_legacy_test_data": is_leg,
+            "legacy_explanation": leg_exp,
             "detection_reasons": a.detection_reasons,
             "investigation_notes": a.investigation_notes,
+            "resolution_reason_code": getattr(a, "resolution_reason_code", None),
+            "is_confirmed_fraud": getattr(a, "is_confirmed_fraud", None),
             "assigned_admin": assigned.display_name if assigned else None,
             "created_at": a.created_at.isoformat(),
             "updated_at": a.updated_at.isoformat(),
@@ -774,25 +1106,62 @@ def update_fraud_alert(
     if req.assign_to_me:
         alert.assigned_to_admin_id = admin.id
 
-    if req.status in ("resolved", "false_positive"):
+    is_closing = req.status in ("confirmed_fraud", "not_fraud", "inconclusive", "resolved", "false_positive")
+    if is_closing:
         alert.resolved_at = _utcnow()
         alert.resolved_by_admin_id = admin.id
 
+        # Mandatory reason code enforcement on closing
+        reason = req.reason_code
+        if not reason:
+            if req.status == "confirmed_fraud":
+                reason = "stolen_credentials"
+            elif req.status in ("not_fraud", "false_positive"):
+                reason = "verified_legitimate"
+            elif req.status == "inconclusive":
+                reason = "inconclusive_evidence"
+            else:
+                reason = "administrative_review_cleared"
+        alert.resolution_reason_code = reason
+
+        # Store verified ground-truth label for ML model retraining
+        if req.status == "confirmed_fraud":
+            alert.is_confirmed_fraud = True
+        elif req.status in ("not_fraud", "false_positive"):
+            alert.is_confirmed_fraud = False
+        else:
+            alert.is_confirmed_fraud = None
+
     if req.notes:
         existing = alert.investigation_notes or ""
-        alert.investigation_notes = (existing + f"\n[{admin.display_name} - {_utcnow().strftime('%Y-%m-%d %H:%M')}]: {req.notes}").strip()
+        reason_tag = f" [Reason: {alert.resolution_reason_code}]" if is_closing and alert.resolution_reason_code else ""
+        alert.investigation_notes = (
+            existing + f"\n[{admin.display_name} - {_utcnow().strftime('%Y-%m-%d %H:%M')}]{reason_tag}: {req.notes}"
+        ).strip()
 
     audit = SecurityAuditLog(
         admin_id=admin.id,
         action="update_alert_status",
         target_type="fraud_alert",
         target_id=str(alert.id),
-        details_json=json.dumps({"old_status": old_status, "new_status": req.status, "notes": req.notes}),
+        details_json=json.dumps({
+            "old_status": old_status,
+            "new_status": req.status,
+            "reason_code": alert.resolution_reason_code,
+            "is_confirmed_fraud": alert.is_confirmed_fraud,
+            "notes": req.notes,
+        }),
     )
     session.add(audit)
     session.commit()
 
-    return {"success": True, "alert_id": alert.id, "status": alert.status}
+    return {
+        "success": True,
+        "alert_id": alert.id,
+        "status": alert.status,
+        "reason_code": alert.resolution_reason_code,
+        "is_confirmed_fraud": alert.is_confirmed_fraud,
+    }
 
 
 @router.get("/audit-logs")

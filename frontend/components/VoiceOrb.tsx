@@ -112,11 +112,11 @@ export function VoiceOrb() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.2 }}
-            className="glass rounded-2xl px-4 py-2 max-w-md text-xs text-cream/90"
+            className="glass rounded-2xl px-4 py-2.5 max-w-md text-sm text-cream/90"
           >
             {transcript && (
               <div>
-                <span className="text-peach-500/70 text-[10px] uppercase tracking-wider mr-2">
+                <span className="text-peach-500/90 text-xs font-bold uppercase tracking-wider mr-2 font-mono">
                   you
                 </span>
                 {transcript}
@@ -124,7 +124,7 @@ export function VoiceOrb() {
             )}
             {response && (
               <div className="mt-1">
-                <span className="text-emerald-400/70 text-[10px] uppercase tracking-wider mr-2">
+                <span className="text-emerald-400 text-xs font-bold uppercase tracking-wider mr-2 font-mono">
                   wallet
                 </span>
                 {response}
@@ -224,7 +224,7 @@ export function VoiceOrb() {
       </motion.button>
 
       {/* Status label */}
-      <div className="text-[10px] uppercase tracking-wider text-cream/50">
+      <div className="text-xs uppercase tracking-wider text-cream/70 font-semibold">
         {errorMessage && state === "error" ? errorMessage : label}
       </div>
     </div>

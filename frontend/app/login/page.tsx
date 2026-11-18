@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { User, api } from "@/lib/api";
 import { writeActiveUserId } from "@/lib/session";
@@ -88,22 +89,22 @@ export default function LoginPage() {
           <div className="w-full max-w-md lg:max-w-lg bg-white/[0.03] backdrop-blur-[2px] rounded-3xl p-6 sm:p-8 border border-white/30 shadow-[0_8px_32px_0_rgba(0,0,0,0.3)]">
             {/* Header */}
             <div className="mb-6">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-peach-500/20 border border-peach-500/40 text-peach-300 text-[11px] font-semibold mb-2.5">
-                <Sparkles size={13} className="text-peach-400" />
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-peach-500/20 border border-peach-500/40 text-peach-300 text-xs font-bold mb-2.5">
+                <Sparkles size={14} className="text-peach-400" />
                 <span>AI-First BDT Ledger</span>
               </div>
 
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+              <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
                 Sign In<span className="text-peach-500">.</span>
               </h2>
-              <p className="text-xs sm:text-sm text-lavender mt-1">
+              <p className="text-sm text-lavender mt-1 font-medium">
                 Enter your credentials to manage your balance, bills, and transfers.
               </p>
             </div>
 
             {error && (
-              <div className="mb-4 p-3 rounded-xl bg-red-500/20 border border-red-500/40 text-red-200 text-xs flex items-center gap-2.5 animate-in fade-in">
-                <span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
+              <div className="mb-4 p-3.5 rounded-xl bg-red-500/20 border border-red-500/40 text-red-200 text-sm flex items-center gap-2.5 animate-in fade-in">
+                <span className="w-2 h-2 rounded-full bg-red-400 shrink-0" />
                 <span className="flex-1 font-medium">{error}</span>
               </div>
             )}
@@ -111,28 +112,28 @@ export default function LoginPage() {
             {/* Login Form */}
             <form onSubmit={handleFormLogin} className="space-y-4">
               {/* Quick autofill suggestion chips */}
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 text-xs text-secondary">
-                <span className="shrink-0 text-peach-400 font-semibold flex items-center gap-1 text-xs">
-                  <Zap size={12} /> Fill:
+              <div className="flex items-center gap-2 overflow-x-auto pb-0.5 text-xs text-secondary">
+                <span className="shrink-0 text-peach-400 font-bold flex items-center gap-1 text-xs">
+                  <Zap size={14} /> Fill:
                 </span>
                 <button
                   type="button"
                   onClick={() => autofill("bikash")}
-                  className="px-2.5 py-1 rounded-full bg-white/10 hover:bg-peach-500/25 border border-white/15 hover:border-peach-500/50 text-cream text-[11px] font-medium transition-all shrink-0"
+                  className="px-3 py-1.5 rounded-full bg-white/10 hover:bg-peach-500/25 border border-white/15 hover:border-peach-500/50 text-cream text-xs font-semibold transition-all shrink-0"
                 >
                   bikash (Boss)
                 </button>
                 <button
                   type="button"
                   onClick={() => autofill("rishad")}
-                  className="px-2.5 py-1 rounded-full bg-white/10 hover:bg-peach-500/25 border border-white/15 hover:border-peach-500/50 text-cream text-[11px] font-medium transition-all shrink-0"
+                  className="px-3 py-1.5 rounded-full bg-white/10 hover:bg-peach-500/25 border border-white/15 hover:border-peach-500/50 text-cream text-xs font-semibold transition-all shrink-0"
                 >
                   rishad
                 </button>
                 <button
                   type="button"
                   onClick={() => autofill("arman")}
-                  className="px-2.5 py-1 rounded-full bg-white/10 hover:bg-peach-500/25 border border-white/15 hover:border-peach-500/50 text-cream text-[11px] font-medium transition-all shrink-0"
+                  className="px-3 py-1.5 rounded-full bg-white/10 hover:bg-peach-500/25 border border-white/15 hover:border-peach-500/50 text-cream text-xs font-semibold transition-all shrink-0"
                 >
                   arman
                 </button>
@@ -140,12 +141,12 @@ export default function LoginPage() {
 
               {/* Email / Username */}
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-cream block tracking-wide">
+                <label className="text-sm font-semibold text-cream block tracking-wide">
                   Email or Username
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-lavender">
-                    <Mail size={16} />
+                    <Mail size={18} />
                   </div>
                   <input
                     type="text"
@@ -154,7 +155,7 @@ export default function LoginPage() {
                     placeholder="bikash@wallet.com or bikash"
                     required
                     disabled={submitting}
-                    className="w-full bg-white/10 border border-white/20 rounded-xl pl-10 pr-4 py-2.5 text-sm text-cream placeholder:text-secondary focus:outline-none focus:border-peach-500 focus:ring-1 focus:ring-peach-500/30 transition-all shadow-inner"
+                    className="w-full bg-white/10 border border-white/20 rounded-xl pl-11 pr-4 py-3 text-base text-cream placeholder:text-secondary focus:outline-none focus:border-peach-500 focus:ring-1 focus:ring-peach-500/30 transition-all shadow-inner font-medium"
                   />
                 </div>
               </div>
@@ -162,20 +163,20 @@ export default function LoginPage() {
               {/* Password */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-semibold text-cream block tracking-wide">
+                  <label className="text-sm font-semibold text-cream block tracking-wide">
                     Password
                   </label>
                   <button
                     type="button"
                     onClick={() => setError("Demo password: enter any text or 'wallet2026'")}
-                    className="text-[11px] text-peach-400 hover:text-peach-300 transition-colors font-medium"
+                    className="text-xs text-peach-400 hover:text-peach-300 transition-colors font-semibold"
                   >
                     Forgot password?
                   </button>
                 </div>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-lavender">
-                    <Lock size={16} />
+                    <Lock size={18} />
                   </div>
                   <input
                     type={showPassword ? "text" : "password"}
@@ -184,7 +185,7 @@ export default function LoginPage() {
                     placeholder="••••••••"
                     required
                     disabled={submitting}
-                    className="w-full bg-white/10 border border-white/20 rounded-xl pl-10 pr-10 py-2.5 text-sm text-cream placeholder:text-secondary focus:outline-none focus:border-peach-500 focus:ring-1 focus:ring-peach-500/30 transition-all font-mono shadow-inner"
+                    className="w-full bg-white/10 border border-white/20 rounded-xl pl-11 pr-11 py-3 text-base text-cream placeholder:text-secondary focus:outline-none focus:border-peach-500 focus:ring-1 focus:ring-peach-500/30 transition-all font-mono shadow-inner font-medium"
                   />
                   <button
                     type="button"
@@ -192,24 +193,24 @@ export default function LoginPage() {
                     className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-lavender hover:text-cream transition-colors"
                     title={showPassword ? "Hide password" : "Show password"}
                   >
-                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
               </div>
 
               {/* Options Row */}
-              <div className="flex items-center justify-between text-xs pt-0.5">
+              <div className="flex items-center justify-between text-xs pt-1">
                 <label className="flex items-center gap-2 cursor-pointer text-lavender hover:text-cream select-none">
                   <input
                     type="checkbox"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
-                    className="w-3.5 h-3.5 rounded border-white/20 bg-white/10 text-peach-500 focus:ring-0 focus:ring-offset-0"
+                    className="w-4 h-4 rounded border-white/20 bg-white/10 text-peach-500 focus:ring-0 focus:ring-offset-0"
                   />
-                  <span className="font-medium text-xs">Remember this device</span>
+                  <span className="font-semibold text-xs">Remember this device</span>
                 </label>
-                <span className="text-[11px] text-lavender flex items-center gap-1 font-medium">
-                  <ShieldCheck size={13} className="text-peach-400" /> Face ID ready
+                <span className="text-xs text-lavender flex items-center gap-1 font-semibold">
+                  <ShieldCheck size={14} className="text-peach-400" /> Face ID ready
                 </span>
               </div>
 
@@ -217,7 +218,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={submitting || !email.trim()}
-                className="w-full btn-peach rounded-xl py-3 text-sm font-bold flex items-center justify-center gap-2.5 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-lg shadow-peach-500/20 active:scale-[0.99]"
+                className="w-full btn-peach rounded-xl py-3.5 text-base font-extrabold flex items-center justify-center gap-2.5 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-lg shadow-peach-500/20 active:scale-[0.99]"
               >
                 {submitting ? (
                   <>
@@ -227,7 +228,7 @@ export default function LoginPage() {
                 ) : (
                   <>
                     <span>Sign In to Account</span>
-                    <ArrowRight size={16} />
+                    <ArrowRight size={18} />
                   </>
                 )}
               </button>
@@ -235,7 +236,7 @@ export default function LoginPage() {
               {/* Divider */}
               <div className="relative my-4 flex items-center justify-center">
                 <div className="border-t border-white/15 w-full" />
-                <span className="bg-plum-950/80 px-3 text-[11px] font-semibold text-secondary uppercase tracking-wider shrink-0">
+                <span className="bg-plum-950/80 px-3 text-xs font-bold text-secondary uppercase tracking-wider shrink-0">
                   or continue with
                 </span>
                 <div className="border-t border-white/15 w-full" />
@@ -269,6 +270,19 @@ export default function LoginPage() {
                 <span>Continue with Google</span>
               </button>
             </form>
+
+            {/* Quick Switch to Admin Portal */}
+            <div className="mt-5 pt-4 border-t border-white/10 flex items-center justify-between text-xs">
+              <span className="text-lavender">System Administrator?</span>
+              <Link
+                href="/admin"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-peach-500/10 hover:bg-peach-500/20 text-peach-300 border border-peach-500/30 transition font-medium"
+              >
+                <ShieldCheck size={14} className="text-peach-400" />
+                <span>Admin Portal</span>
+                <ArrowRight size={12} />
+              </Link>
+            </div>
           </div>
         </div>
 
@@ -297,22 +311,22 @@ export default function LoginPage() {
           {/* Feature Badges with ultra-clear glassmorphism */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 max-w-md pt-2">
             <div className="bg-white/[0.03] backdrop-blur-[2px] rounded-2xl p-3.5 flex items-start gap-3 border border-white/25">
-              <div className="w-8 h-8 rounded-lg bg-peach-500/25 text-peach-300 flex items-center justify-center shrink-0">
-                <ShieldCheck size={18} />
+              <div className="w-9 h-9 rounded-lg bg-peach-500/25 text-peach-300 flex items-center justify-center shrink-0">
+                <ShieldCheck size={20} />
               </div>
               <div>
-                <h3 className="text-xs sm:text-sm font-bold text-white">Biometric Face ID</h3>
-                <p className="text-[11px] text-lavender mt-0.5">Real-time browser-verified facial recognition.</p>
+                <h3 className="text-sm font-bold text-white">Biometric Face ID</h3>
+                <p className="text-xs text-lavender mt-0.5 font-medium">Real-time browser-verified facial recognition.</p>
               </div>
             </div>
 
             <div className="bg-white/[0.03] backdrop-blur-[2px] rounded-2xl p-3.5 flex items-start gap-3 border border-white/25">
-              <div className="w-8 h-8 rounded-lg bg-peach-500/25 text-peach-300 flex items-center justify-center shrink-0">
-                <Zap size={18} />
+              <div className="w-9 h-9 rounded-lg bg-peach-500/25 text-peach-300 flex items-center justify-center shrink-0">
+                <Zap size={20} />
               </div>
               <div>
-                <h3 className="text-xs sm:text-sm font-bold text-white">ElevenLabs Voice</h3>
-                <p className="text-[11px] text-lavender mt-0.5">Instant TTS voice synthesis and STT commands.</p>
+                <h3 className="text-sm font-bold text-white">ElevenLabs Voice</h3>
+                <p className="text-xs text-lavender mt-0.5 font-medium">Instant TTS voice synthesis and STT commands.</p>
               </div>
             </div>
           </div>

@@ -8,6 +8,36 @@ export type User = {
   display_name: string;
   phone: string;
   email?: string;
+  user_type?: string;
+  account_tier?: string;
+  effective_tier?: string;
+  kyc_status?: string;
+  business_name?: string | null;
+  masked_phone?: string;
+  created_at?: string;
+  daily_limit?: string | number | null;
+  single_txn_limit?: string | number | null;
+  effective_single_limit?: number;
+  effective_daily_limit?: number;
+  requested_upgrade_tier?: string | null;
+  requested_upgrade_at?: string | null;
+};
+
+export type UserProfileDetails = {
+  user: User;
+  current_balance_bdt: string;
+  daily_spent_today_bdt: string;
+  daily_limit_bdt: string;
+  daily_remaining_bdt: string;
+  daily_usage_pct: number;
+  frequent_recipients: {
+    user_id: number;
+    handle: string;
+    display_name: string;
+    tier: string;
+    count: number;
+  }[];
+  baseline_median_30d: number;
 };
 
 export type Txn = {
@@ -226,6 +256,19 @@ export const api = {
     httpJson<User>("POST", "/auth/login", { email, password: password || "" }),
   listUsers: () => httpJson<User[]>("GET", "/users"),
   getUser: (id: number) => httpJson<User>("GET", `/users/${id}`),
+  getUserProfile: (id: number) => httpJson<UserProfileDetails>("GET", `/users/${id}/profile`),
+  requestUserUpgrade: (
+    userId: number,
+    body: { requested_tier: string; business_name?: string; reason?: string }
+  ) =>
+    httpJson<{
+      success: boolean;
+      message: string;
+      requested_tier: string;
+      kyc_status: string;
+      effective_tier: string;
+    }>("POST", `/users/${userId}/upgrade-request`, body),
+  getTierConfig: () => httpJson<Record<string, unknown>>("GET", "/tier-config"),
   getUserByHandle: (handle: string) =>
     httpJson<User>("GET", `/users/handle/${handle}`),
   getBalance: (id: number) =>
@@ -452,6 +495,38 @@ export const api = {
       `/admin/api/users?${sp.toString()}`
     );
   },
+  getAdminUser: (userId: number) =>
+    adminHttpJson<any>("GET", `/admin/api/users/${userId}`),
+  adminVerifyKYC: (
+    userId: number,
+    body: { kyc_status: "verified" | "unverified"; notes?: string; activate_requested_tier?: boolean }
+  ) =>
+    adminHttpJson<{
+      success: boolean;
+      user_id: number;
+      kyc_status: string;
+      account_tier: string;
+      effective_tier: string;
+    }>("PATCH", `/admin/api/users/${userId}/kyc`, body),
+  adminChangeTier: (
+    userId: number,
+    body: {
+      account_tier: string;
+      reason_code: string;
+      notes?: string;
+      user_type?: string;
+      single_txn_limit?: number;
+      daily_limit?: number;
+    }
+  ) =>
+    adminHttpJson<{
+      success: boolean;
+      user_id: number;
+      account_tier: string;
+      kyc_status: string;
+      effective_tier: string;
+      reason_code: string;
+    }>("PATCH", `/admin/api/users/${userId}/tier`, body),
   toggleUserFlag: (userId: number, reason?: string) =>
     adminHttpJson<{ success: boolean; user_id: number; is_flagged: boolean }>(
       "POST",
@@ -475,12 +550,17 @@ export const api = {
       `/admin/api/fraud/alerts?${sp.toString()}`
     );
   },
-  updateFraudAlert: (alertId: number, body: { status: string; notes?: string; assign_to_me?: boolean }) =>
-    adminHttpJson<{ success: boolean; alert_id: number; status: string }>(
-      "PATCH",
-      `/admin/api/fraud/alerts/${alertId}`,
-      body
-    ),
+  updateFraudAlert: (
+    alertId: number,
+    body: { status: string; reason_code?: string; notes?: string; assign_to_me?: boolean }
+  ) =>
+    adminHttpJson<{
+      success: boolean;
+      alert_id: number;
+      status: string;
+      reason_code?: string;
+      is_confirmed_fraud?: boolean;
+    }>("PATCH", `/admin/api/fraud/alerts/${alertId}`, body),
   getAdminAuditLogs: (params?: { page?: number; page_size?: number }) => {
     const sp = new URLSearchParams();
     if (params?.page) sp.set("page", String(params.page));
@@ -509,3 +589,13 @@ export const api = {
       timestamp: string;
     }>("POST", "/admin/api/ai/query", { query, history }),
 };
+
+/**
+ * Mask sensitive customer/sender phone numbers in the UI (e.g. 01926240062 -> 0192****062).
+ */
+export function maskPhone(phone?: string | null): string {
+  if (!phone) return "";
+  const cleaned = phone.trim();
+  if (cleaned.length < 8) return cleaned;
+  return `${cleaned.slice(0, 4)}****${cleaned.slice(-3)}`;
+}

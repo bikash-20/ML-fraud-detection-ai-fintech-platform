@@ -11,7 +11,7 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import desc, func, select
 from sqlalchemy.orm import Session, joinedload
 
 from .. import engine
@@ -32,7 +32,53 @@ from ..schemas import (
     SavingsGoalOut,
     TxnOut,
     UserOut,
+    UserProfileDetailsOut,
+    UserUpgradeRequest,
 )
+from ..tier_config import (
+    ACCOUNT_TIERS,
+    AGENT_LIMITS,
+    DEFAULT_TYPE_TIER_MAPPING,
+    TIER_BASELINE_FALLBACKS,
+    TIER_LIMITS,
+    USER_TYPES,
+    get_effective_limits,
+    get_effective_tier,
+)
+
+
+def _build_user_out(u: User) -> UserOut:
+    eff_tier = get_effective_tier(
+        getattr(u, "account_tier", None) or getattr(u, "tier", "personal"),
+        getattr(u, "kyc_status", "unverified"),
+    )
+    limits = get_effective_limits(
+        eff_tier,
+        getattr(u, "kyc_status", "unverified"),
+        custom_single=float(u.single_txn_limit) if getattr(u, "single_txn_limit", None) else None,
+        custom_daily=float(u.daily_limit) if getattr(u, "daily_limit", None) else None,
+        user_type=getattr(u, "user_type", None),
+    )
+    return UserOut(
+        id=u.id,
+        handle=u.handle,
+        display_name=u.display_name,
+        phone=u.phone,
+        email=f"{u.handle}@wallet.com",
+        user_type=getattr(u, "user_type", "student") or "student",
+        account_tier=getattr(u, "account_tier", "personal") or getattr(u, "tier", "personal") or "personal",
+        effective_tier=eff_tier,
+        kyc_status=getattr(u, "kyc_status", "unverified") or "unverified",
+        business_name=getattr(u, "business_name", None),
+        masked_phone=u.masked_phone,
+        created_at=u.created_at,
+        daily_limit=u.daily_limit,
+        single_txn_limit=u.single_txn_limit,
+        effective_single_limit=float(limits["single_txn_limit"]),
+        effective_daily_limit=float(limits["daily_limit"]),
+        requested_upgrade_tier=getattr(u, "requested_upgrade_tier", None),
+        requested_upgrade_at=getattr(u, "requested_upgrade_at", None),
+    )
 
 
 # ---- Face ID embedding (de)serialisation -----------------------------------
@@ -62,20 +108,27 @@ def _unpack_embedding(blob: bytes) -> list[float]:
 router = APIRouter(tags=["accounts"])
 
 
+@router.get("/tier-config")
+def get_tier_config() -> dict:
+    """Single source of truth for account tiers and transaction limits.
+
+    Labeled: Configurable assumptions to verify against current Bangladesh Bank rules.
+    """
+    return {
+        "tiers": TIER_LIMITS,
+        "agent_limits": AGENT_LIMITS,
+        "user_types": USER_TYPES,
+        "account_tiers": ACCOUNT_TIERS,
+        "default_type_tier_mapping": DEFAULT_TYPE_TIER_MAPPING,
+        "regulatory_disclaimer": "Configurable assumptions to verify against current Bangladesh Bank rules",
+    }
+
+
 @router.get("/users", response_model=list[UserOut])
 def list_users() -> list[UserOut]:
     with session_scope() as s:
         rows = s.execute(select(User).order_by(User.id)).scalars().all()
-        return [
-            UserOut(
-                id=u.id,
-                handle=u.handle,
-                display_name=u.display_name,
-                phone=u.phone,
-                email=f"{u.handle}@wallet.com",
-            )
-            for u in rows
-        ]
+        return [_build_user_out(u) for u in rows]
 
 
 @router.post("/auth/login", response_model=UserOut)
@@ -93,13 +146,7 @@ def login(body: LoginRequest) -> UserOut:
         ).first()
         if u is None:
             raise HTTPException(401, "No account found matching this email or username.")
-        return UserOut(
-            id=u.id,
-            handle=u.handle,
-            display_name=u.display_name,
-            phone=u.phone,
-            email=f"{u.handle}@wallet.com",
-        )
+        return _build_user_out(u)
 
 
 @router.get("/users/{user_id}", response_model=UserOut)
@@ -108,13 +155,7 @@ def get_user(user_id: int) -> UserOut:
         u = s.get(User, user_id)
         if u is None:
             raise HTTPException(404, "user not found")
-        return UserOut(
-            id=u.id,
-            handle=u.handle,
-            display_name=u.display_name,
-            phone=u.phone,
-            email=f"{u.handle}@wallet.com",
-        )
+        return _build_user_out(u)
 
 
 @router.get("/users/handle/{handle}", response_model=UserOut)
@@ -123,13 +164,130 @@ def get_user_by_handle(handle: str) -> UserOut:
         u = s.query(User).filter_by(handle=handle).one_or_none()
         if u is None:
             raise HTTPException(404, "user not found")
-        return UserOut(
-            id=u.id,
-            handle=u.handle,
-            display_name=u.display_name,
-            phone=u.phone,
-            email=f"{u.handle}@wallet.com",
+        return _build_user_out(u)
+
+
+@router.get("/users/{user_id}/profile", response_model=UserProfileDetailsOut)
+def get_user_profile(user_id: int) -> UserProfileDetailsOut:
+    """Return comprehensive profile view including limits, today's spend vs limit, and frequent recipients."""
+    with session_scope() as s:
+        u = s.get(User, user_id)
+        if u is None:
+            raise HTTPException(404, "user not found")
+
+        acct = s.query(Account).filter_by(user_id=u.id).one_or_none()
+        bal = acct.balance_bdt if acct else Decimal("0.00")
+
+        # Today's completed outbound spend
+        now = _utcnow()
+        start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        daily_spent = Decimal("0.00")
+        if acct:
+            spent_row = (
+                s.query(func.sum(Transaction.amount_bdt))
+                .filter(
+                    Transaction.from_account_id == acct.id,
+                    Transaction.status == TxnStatus.COMPLETED.value,
+                    Transaction.created_at >= start_of_day,
+                )
+                .scalar()
+            )
+            if spent_row:
+                daily_spent = Decimal(str(spent_row))
+
+        user_out = _build_user_out(u)
+        daily_limit_val = Decimal(str(user_out.effective_daily_limit or 100000.0))
+        remaining = max(Decimal("0.00"), daily_limit_val - daily_spent)
+        usage_pct = float(round((daily_spent / daily_limit_val) * Decimal("100.0"), 1)) if daily_limit_val > 0 else 0.0
+
+        # Frequent recipients
+        frequent = []
+        if acct:
+            rec_rows = (
+                s.query(Transaction.to_account_id, func.count(Transaction.id).label("cnt"))
+                .filter(
+                    Transaction.from_account_id == acct.id,
+                    Transaction.to_account_id.isnot(None),
+                    Transaction.status == TxnStatus.COMPLETED.value,
+                )
+                .group_by(Transaction.to_account_id)
+                .order_by(desc("cnt"))
+                .limit(4)
+                .all()
+            )
+            for r_acct_id, cnt in rec_rows:
+                rec_acct = s.get(Account, r_acct_id)
+                if rec_acct and rec_acct.user_id:
+                    rec_u = s.get(User, rec_acct.user_id)
+                    if rec_u:
+                        frequent.append({
+                            "user_id": rec_u.id,
+                            "handle": rec_u.handle,
+                            "display_name": rec_u.display_name,
+                            "tier": rec_u.account_tier,
+                            "count": cnt,
+                        })
+
+        # Calculate 30-day baseline median
+        import numpy as np
+        t30 = now - timedelta(days=30)
+        past_amounts = []
+        if acct:
+            res_30d = (
+                s.query(Transaction.amount_bdt)
+                .filter(
+                    Transaction.from_account_id == acct.id,
+                    Transaction.status == TxnStatus.COMPLETED.value,
+                    Transaction.created_at >= t30,
+                )
+                .all()
+            )
+            past_amounts = [float(r[0]) for r in res_30d if r[0] is not None]
+
+        if len(past_amounts) >= 5:
+            baseline_med = float(np.median(past_amounts))
+        else:
+            baseline_med = TIER_BASELINE_FALLBACKS.get(user_out.effective_tier, 1000.0)
+
+        return UserProfileDetailsOut(
+            user=user_out,
+            current_balance_bdt=bal,
+            daily_spent_today_bdt=daily_spent,
+            daily_limit_bdt=daily_limit_val,
+            daily_remaining_bdt=remaining,
+            daily_usage_pct=usage_pct,
+            frequent_recipients=frequent,
+            baseline_median_30d=baseline_med,
         )
+
+
+@router.post("/users/{user_id}/upgrade-request")
+def request_user_upgrade(user_id: int, body: UserUpgradeRequest) -> dict:
+    """Submit a request to upgrade tier (e.g. to verified or business).
+
+    Security rule:
+    User cannot activate tier directly. The request is placed in pending state.
+    Business or agent tier becomes active ONLY after an admin sets kyc_status = verified.
+    """
+    with session_scope() as s:
+        u = s.get(User, user_id)
+        if u is None:
+            raise HTTPException(404, "user not found")
+
+        u.requested_upgrade_tier = body.requested_tier
+        u.requested_upgrade_at = _utcnow()
+        if body.business_name:
+            u.business_name = body.business_name
+
+        s.flush()
+        return {
+            "success": True,
+            "message": f"Upgrade request to {body.requested_tier.capitalize()} Tier submitted. Pending administrator KYC verification.",
+            "requested_tier": body.requested_tier,
+            "kyc_status": u.kyc_status,
+            "effective_tier": u.effective_tier,
+            "business_name": u.business_name,
+        }
 
 
 @router.get("/users/{user_id}/balance", response_model=BalanceOut)

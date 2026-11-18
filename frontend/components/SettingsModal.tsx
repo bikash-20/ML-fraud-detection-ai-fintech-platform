@@ -228,7 +228,7 @@ export function SettingsModal({
               }
               type="password"
             />
-            <p className="text-[11px] text-secondary">
+            <p className="text-xs text-secondary font-medium leading-relaxed">
               When the local cascade returns empty, the backend tries OpenRouter
               keys. Without a key, the regex fallback keeps the demo alive.
             </p>
@@ -312,7 +312,7 @@ export function SettingsModal({
                           ? "Face ID enrolled"
                           : "Face ID not enrolled"}
                       </div>
-                      <div className="text-[11px] text-secondary">
+                      <div className="text-xs text-secondary font-medium">
                         {faceStatus?.enrolled
                           ? `Enrolled ${
                               faceStatus.enrolled_at
@@ -386,7 +386,7 @@ export function SettingsModal({
                     }}
                   />
                 ) : null}
-                <p className="text-[11px] text-secondary">
+                <p className="text-xs text-secondary font-medium leading-relaxed">
                   Matching runs entirely in your browser; only a 128-dim
                   number array is stored on the server. Demo-only — not a
                   security boundary.
@@ -401,7 +401,7 @@ export function SettingsModal({
                 <div className="text-sm font-medium text-cream">
                   Show detailed transaction security analysis
                 </div>
-                <div className="text-[11px] text-secondary mt-0.5">
+                <div className="text-xs text-secondary mt-0.5 font-medium leading-relaxed">
                   Display explainable risk verification timelines during transaction confirmation. Backend fraud detection remains active at all times.
                 </div>
               </div>
@@ -527,7 +527,7 @@ function Status({
         />
         <span className="text-cream font-medium">{label}</span>
       </div>
-      <div className="text-[10px] text-secondary mt-0.5 truncate" title={hint}>
+      <div className="text-xs text-secondary mt-0.5 truncate font-medium" title={hint}>
         {hint}
       </div>
     </div>

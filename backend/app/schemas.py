@@ -111,6 +111,36 @@ class UserOut(BaseModel):
     display_name: str
     phone: str
     email: Optional[str] = None
+    user_type: str = "student"
+    account_tier: str = "personal"
+    effective_tier: str = "personal"
+    kyc_status: str = "unverified"
+    business_name: Optional[str] = None
+    masked_phone: Optional[str] = None
+    created_at: Optional[datetime] = None
+    daily_limit: Optional[Decimal] = None
+    single_txn_limit: Optional[Decimal] = None
+    effective_single_limit: Optional[float] = None
+    effective_daily_limit: Optional[float] = None
+    requested_upgrade_tier: Optional[str] = None
+    requested_upgrade_at: Optional[datetime] = None
+
+
+class UserUpgradeRequest(BaseModel):
+    requested_tier: Literal["verified", "business"]
+    business_name: Optional[str] = None
+    reason: Optional[str] = None
+
+
+class UserProfileDetailsOut(BaseModel):
+    user: UserOut
+    current_balance_bdt: Decimal
+    daily_spent_today_bdt: Decimal
+    daily_limit_bdt: Decimal
+    daily_remaining_bdt: Decimal
+    daily_usage_pct: float
+    frequent_recipients: list[dict]
+    baseline_median_30d: float
 
 
 class BalanceOut(BaseModel):

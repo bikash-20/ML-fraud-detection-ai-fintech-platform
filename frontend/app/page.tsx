@@ -17,7 +17,8 @@ import { SplitForm } from "@/components/SplitForm";
 import { SavingsGoals } from "@/components/SavingsGoals";
 import { FinancialIntelligenceCard } from "@/components/FinancialIntelligenceCard";
 import { AnimatePresence, motion } from "framer-motion";
-import { HandCoins, LogOut, Settings as SettingsIcon } from "lucide-react";
+import Link from "next/link";
+import { HandCoins, LogOut, Settings as SettingsIcon, User as UserIcon } from "lucide-react";
 import { speakText, subscribeSpeaking } from "@/lib/speech";
 import { useVoiceLoop } from "@/hooks/useVoiceLoop";
 
@@ -442,34 +443,51 @@ export default function DashboardPage() {
             Wallet
             <span className="text-peach-500">.</span>
           </h1>
-          <p className="text-xs text-secondary mt-0.5">
+          <p className="text-sm text-secondary mt-0.5 font-medium">
             Digital AI money movement platform
           </p>
         </div>
         {activeUser && (
-          <div className="flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400/50" />
-            <span className="font-semibold text-cream">{activeUser.display_name}</span>
-            <span className="text-secondary text-[11px] font-mono">@{activeUser.handle}</span>
-          </div>
+          <Link
+            href="/profile"
+            title="View Account & Tier Profile"
+            className="flex items-center gap-2.5 px-4 py-2 rounded-full bg-white/5 border border-white/10 hover:border-peach-500/40 text-sm transition group"
+          >
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400/50" />
+            <span className="font-bold text-cream group-hover:text-peach-300 transition">{activeUser.display_name}</span>
+            <span className="text-secondary text-xs font-mono font-medium">@{activeUser.handle}</span>
+            {activeUser.account_tier && (
+              <span className="px-2 py-0.5 rounded text-xs uppercase font-bold bg-peach-500/15 text-peach-300 border border-peach-500/30">
+                {activeUser.account_tier}
+              </span>
+            )}
+          </Link>
         )}
         <div className="flex items-center gap-2">
+          <Link
+            href="/profile"
+            title="Profile & Regulatory Limits"
+            className="btn-ghost rounded-full px-3.5 py-2 flex items-center gap-1.5 text-sm font-semibold"
+          >
+            <UserIcon size={16} strokeWidth={2} />
+            <span>Profile</span>
+          </Link>
           <button
             type="button"
             onClick={() => setAskOpen(true)}
             title="Ask someone for money"
-            className="btn-ghost rounded-full px-3.5 py-2 flex items-center gap-2 text-sm font-medium"
+            className="btn-ghost rounded-full px-4 py-2 flex items-center gap-2 text-sm font-semibold"
           >
-            <HandCoins size={17} strokeWidth={1.8} />
+            <HandCoins size={17} strokeWidth={2} />
             <span>Request money</span>
           </button>
           <button
             type="button"
             onClick={() => setSettingsOpen(true)}
             title="Settings"
-            className="btn-ghost rounded-full w-10 h-10 flex items-center justify-center text-sm"
+            className="btn-ghost rounded-full w-10 h-10 flex items-center justify-center text-sm font-medium"
           >
-            <SettingsIcon size={17} strokeWidth={1.8} />
+            <SettingsIcon size={18} strokeWidth={2} />
           </button>
           <VoiceButton
             disabled={headerMicDisabled}
@@ -479,9 +497,9 @@ export default function DashboardPage() {
             type="button"
             onClick={handleLogout}
             title="Sign out"
-            className="btn-ghost rounded-full w-10 h-10 flex items-center justify-center text-sm"
+            className="btn-ghost rounded-full w-10 h-10 flex items-center justify-center text-sm font-medium hover:text-rose-300"
           >
-            <LogOut size={17} strokeWidth={1.8} />
+            <LogOut size={18} strokeWidth={2} />
           </button>
         </div>
       </motion.header>
@@ -496,9 +514,10 @@ export default function DashboardPage() {
           userId={activeUser.id}
           displayName={activeUser.display_name}
           phone={activeUser.phone}
+          user={activeUser}
         />
         <div className="glass rounded-2xl p-6">
-          <div className="text-secondary text-sm font-medium uppercase tracking-wider mb-4">
+          <div className="text-secondary text-sm font-bold uppercase tracking-wider mb-4">
             Quick send
           </div>
           <SendForm
@@ -507,12 +526,12 @@ export default function DashboardPage() {
             pending={working && !reviewResp}
             disabled={!!reviewResp}
           />
-          <button type="button" onClick={() => setSplitOpen(true)} disabled={working || !!reviewResp} className="btn-ghost rounded-lg px-4 py-2.5 mt-3 w-full text-sm disabled:opacity-40">
+          <button type="button" onClick={() => setSplitOpen(true)} disabled={working || !!reviewResp} className="btn-ghost rounded-xl px-4 py-3 mt-3 w-full text-base font-semibold disabled:opacity-40">
             Split money with two people
           </button>
         </div>
         <div className="glass rounded-2xl p-6">
-          <div className="text-secondary text-sm font-medium uppercase tracking-wider mb-4">
+          <div className="text-secondary text-sm font-bold uppercase tracking-wider mb-4">
             Pending requests
           </div>
           <PendingRequests

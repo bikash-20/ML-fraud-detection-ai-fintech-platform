@@ -319,7 +319,7 @@ def _is_high_confidence_intent(
         "greeting", "thanks", "bye", "balance", "history",
         "spending_recent", "spending_where", "latest_transaction",
         "send_vs_receive", "requests_made", "requests_received",
-        "recent_splits", "spending_history", "budget_status",
+        "recent_splits", "spending_history", "budget_status", "account_limits",
     }:
         return True
     if action == "set_budget":
@@ -380,6 +380,22 @@ _SPENDING_RECENT_PATTERNS = [
     r"spending recently",
     r"recent expense",
     r"how much have i spent",
+]
+
+_ACCOUNT_LIMITS_PATTERNS = [
+    r"what is my limit",
+    r"what are my limits",
+    r"my limit",
+    r"daily limit",
+    r"transfer limit",
+    r"single transaction limit",
+    r"account tier",
+    r"what tier am i",
+    r"check my limit",
+    r"how much can i send",
+    r"can i send",
+    r"আমার লিমিট",
+    r"আমার টিয়ার",
 ]
 
 _SPENDING_WHERE_PATTERNS = [
@@ -504,7 +520,8 @@ _FINANCIAL_LITERACY_PATTERNS = [
 _BALANCE_TOKENS = {
     "balance", "bal", "মিউ", "money left", "how much do i have",
     "what's my balance", "what is my balance", "how much money do i have",
-    "amount", "funds", "check balance", "current balance",
+    "check balance", "current balance", "balance check", "আমার ব্যালেন্স",
+    "কত টাকা আছে",
 }
 
 _HISTORY_TOKENS = {
@@ -512,8 +529,16 @@ _HISTORY_TOKENS = {
     "কী করেছি", "history list",
 }
 
+_RECHARGE_TRIGGERS = {
+    "recharge", "mobile recharge", "flexiload", "রিচার্জ", "মোবাইল রিচার্জ", "top up", "topup", "airtime",
+}
+
+_CASHOUT_TRIGGERS = {
+    "cash out", "cashout", "withdraw", "উত্তোলন", "ক্যাশ আউট", "ক্যাশআউট", "agent cashout",
+}
+
 _REQUEST_TRIGGERS = {
-    "ask", "request", "demand", "collect", "কর", "ধার", "চাই",
+    "ask", "request", "demand", "collect", "ধার", "চাই",
     "need", "want from", "ask for money", "request money",
 }
 
@@ -544,8 +569,10 @@ def _normalize(text: str) -> str:
 def _extract_amount(text: str) -> Optional[float]:
     """Find a money amount in the text. Handles 500, 1,200.50, 1k, ৳500."""
     t = _normalize(text)
+    # Strip 11-digit phone numbers so mobile numbers like 01712345678 are not treated as money amounts
+    t_clean = re.sub(r"\b(?:\+?880|0)1[3-9]\d{8}\b", " ", t)
     # k-suffix first (1k -> 1000)
-    m = _K_SUFFIX_RE.search(t)
+    m = _K_SUFFIX_RE.search(t_clean)
     if m:
         try:
             return float(m.group(1)) * 1000
@@ -553,7 +580,7 @@ def _extract_amount(text: str) -> Optional[float]:
             pass
     # Strip the ৳/bdt prefix when scanning for a number.
     candidates: list[float] = []
-    for m in _AMOUNT_RE.finditer(t):
+    for m in _AMOUNT_RE.finditer(t_clean):
         num = m.group("num").replace(",", "").strip()
         if not num:
             continue
@@ -567,18 +594,26 @@ def _extract_amount(text: str) -> Optional[float]:
 
 
 def _extract_recipient(text: str, known: list[str]) -> Optional[str]:
-    """Find a known handle in the text. Tries longest-first."""
+    """Find a known handle, phone, or alias in the text. Tries longest-first."""
     t = _normalize(text)
     candidates = sorted(known, key=len, reverse=True)
 
-    # 1. Preposition-priority: handle directly after a recipient preposition.
+    # 1. Alias: "agent" or "agent point" maps to registered agent handle "tahzib"
+    if ("agent" in t or "এজেন্ট" in t) and "tahzib" in known:
+        return "tahzib"
+
+    # 2. Check for 11-digit phone number in text (e.g. 01712345678)
+    phone_m = re.search(r"\b(?:\+?880|0)1[3-9]\d{8}\b", t)
+    phone_found = phone_m.group(0) if phone_m else None
+
+    # 3. Preposition-priority: handle directly after a recipient preposition.
     prep_re = re.compile(
         r"\b(?:to|for|towards|toward|with|by|from|কে|এ|টা)\s+(?:a\s+|an\s+|the\s+|ur\s+|u\s+)?"
-        r"(?P<h>[a-z]+)",
+        r"(?P<h>[a-z0-9_]+)",
         re.IGNORECASE,
     )
     prep_fallback = None
-    stop_words = {"the", "a", "an", "my", "your", "ur", "someone", "him", "her", "me", "taka", "tk", "bdt"}
+    stop_words = {"the", "a", "an", "my", "your", "ur", "someone", "him", "her", "me", "taka", "tk", "bdt", "account", "wallet"}
     for m in prep_re.finditer(t):
         word = m.group("h")
         if word in known:
@@ -589,16 +624,21 @@ def _extract_recipient(text: str, known: list[str]) -> Optional[str]:
         if not prep_fallback and word not in stop_words:
             prep_fallback = word
 
-    # 2. Substring match anywhere.
+    # 4. Substring match anywhere in known handles.
     for h in candidates:
         if re.search(rf"\b{re.escape(h)}\b", t):
             return h
-    # 3. Fuzzy: handle inside a word.
+    # 5. Fuzzy: handle inside a word.
     for h in candidates:
         if h in t:
             return h
 
-    return prep_fallback
+    if prep_fallback:
+        return prep_fallback
+    if phone_found:
+        return phone_found
+
+    return None
 
 
 def _extract_budget_info(text: str) -> tuple[str, Optional[float]]:
@@ -624,6 +664,9 @@ def _classify_action(text: str) -> str:
     for pat in _SPENDING_RECENT_PATTERNS:
         if re.search(pat, t):
             return "spending_recent"
+    for pat in _ACCOUNT_LIMITS_PATTERNS:
+        if re.search(pat, t):
+            return "account_limits"
     for pat in _SPENDING_WHERE_PATTERNS:
         if re.search(pat, t):
             return "spending_where"
@@ -663,10 +706,14 @@ def _classify_action(text: str) -> str:
         for g in _GREETINGS:
             if t == g or t.startswith(g + " "):
                 return "greeting"
-    if any(t.startswith(k) or k in t for k in _THANKS):
+    if any(re.search(rf"\b{re.escape(k)}\b", t) for k in _THANKS):
         return "thanks"
-    if any(k in t for k in _BYE):
+    if any(re.search(rf"\b{re.escape(k)}\b", t) for k in _BYE):
         return "bye"
+    if any(k in t for k in _RECHARGE_TRIGGERS):
+        return "recharge"
+    if any(k in t for k in _CASHOUT_TRIGGERS):
+        return "cash_out"
     if any(k in t for k in _BALANCE_TOKENS):
         return "balance"
     if any(k in t for k in _HISTORY_TOKENS):
@@ -695,6 +742,8 @@ def _regex_intent(text: str, known_handles: list[str], known_billers: list[str])
 
     if action == "spending_recent":
         return {"action": "spending_recent", "amount": None, "recipient": None, "biller": None, "split_recipients": []}
+    if action == "account_limits":
+        return {"action": "account_limits", "amount": None, "recipient": None, "biller": None, "split_recipients": []}
     if action == "spending_where":
         return {"action": "spending_where", "amount": None, "recipient": None, "biller": None, "split_recipients": []}
     if action == "latest_transaction":
@@ -732,13 +781,26 @@ def _regex_intent(text: str, known_handles: list[str], known_billers: list[str])
             topic = "festival_savings"
         return {"action": "financial_literacy", "topic": topic, "amount": None, "recipient": None, "biller": None, "split_recipients": []}
 
-    if action == "send" or action == "request":
+    if action in ("send", "request", "recharge", "cash_out"):
+        sub_action = "send"
+        if action == "recharge":
+            sub_action = "recharge"
+            action = "send"
+        elif action == "cash_out":
+            sub_action = "cash_out"
+            action = "send"
+            if not recipient and "tahzib" in known_handles:
+                recipient = "tahzib"
+
+        note = "Mobile Recharge" if sub_action == "recharge" else ("Cash Out via Agent" if sub_action == "cash_out" else None)
         return {
             "action": action,
+            "sub_action": sub_action,
             "amount": amount,
             "recipient": recipient,
             "biller": None,
             "split_recipients": [],
+            "note": note,
         }
     if action == "split":
         t = _normalize(text)
@@ -930,9 +992,9 @@ def _deterministic_chat(text: str, user_handle: str) -> str:
     # Check thanks/bye/greetings BEFORE "how are you" / greetings because some
     # greeting tokens (e.g. "yo") are substrings of longer phrases ("thank you",
     # "goodbye"). Order matters: thanks/bye first, then greetings.
-    if any(k in t for k in _THANKS):
+    if any(re.search(rf"\b{re.escape(k)}\b", t) for k in _THANKS):
         return _THANKS_REPLIES[0]
-    if any(k in t for k in _BYE):
+    if any(re.search(rf"\b{re.escape(k)}\b", t) for k in _BYE):
         return _BYE_REPLIES[0]
     if any(k in t for k in ("how are you", "how's it going", "how is it going", "what's up")):
         return "Doing well, Boss. I'm ready whenever you are."
@@ -958,64 +1020,119 @@ def _deterministic_chat(text: str, user_handle: str) -> str:
 
 
 def _format_bdt_amt(val: Any) -> str:
-    """Format an amount as clean BDT taka text (e.g. 500 taka)."""
+    """Format an amount as clean BDT taka text (e.g. ৳500)."""
     if val is None:
         return "the money"
     try:
         f = float(str(val).replace(",", ""))
         if f.is_integer():
-            return f"{int(f)} taka"
-        return f"{f:,.2f} taka"
+            return f"৳{int(f):,}"
+        return f"৳{f:,.2f}"
     except (ValueError, TypeError):
-        return f"{val} taka"
+        return f"৳{val}"
 
 
 def _deterministic_phrase(text_kind: str, facts: dict) -> str:
-    """Last-resort template matching the Boss persona and exact requirements."""
+    """Deterministic natural phrasing matching the Boss persona and exact requirements."""
     if text_kind == "review_send":
         amt_str = _format_bdt_amt(facts.get("amount_bdt"))
         recipient = facts.get("recipient", "the recipient")
-        return f"Boss, did you mean send {amt_str} to {recipient}?"
+        sub_action = facts.get("sub_action") or "send"
+        resulting = _format_bdt_amt(facts.get("resulting_balance_bdt"))
+
+        if sub_action == "recharge":
+            return (
+                f"Sure Boss! Preparing to recharge {amt_str} for @{recipient}. "
+                f"Your new balance will be {resulting} after deducting. "
+                "Please confirm below to proceed."
+            )
+        elif sub_action == "cash_out":
+            return (
+                f"Sure Boss! Preparing to cash out {amt_str} to Agent @{recipient}. "
+                f"Your new balance will be {resulting} after deducting. "
+                "Please confirm below to proceed."
+            )
+        else:
+            return (
+                f"Sure Boss! Preparing to send {amt_str} to @{recipient}. "
+                f"Your new balance will be {resulting} after deducting. "
+                "Please confirm below to proceed."
+            )
+
     if text_kind == "review_request":
         amt_str = _format_bdt_amt(facts.get("amount_bdt"))
         payer = facts.get("recipient") or facts.get("payer", "the user")
-        return f"Boss, did you mean request {amt_str} from {payer}?"
+        curr_bal = _format_bdt_amt(facts.get("current_balance_bdt"))
+        bal_clause = f" Your balance will remain {curr_bal} until approved." if curr_bal != "the money" else ""
+        return (
+            f"Sure Boss! Requesting {amt_str} from @{payer}.{bal_clause} "
+            "Please confirm below to proceed."
+        )
+
     if text_kind == "review_split":
         amt_str = _format_bdt_amt(facts.get("total_amount_bdt"))
-        recipients = ", ".join(facts.get("recipients", []))
-        return f"Boss, did you mean split {amt_str} with {recipients}?"
+        recipients_list = facts.get("recipients", [])
+        recipients = ", ".join(f"@{r}" for r in recipients_list) if recipients_list else "the group"
+        per_amt = _format_bdt_amt(facts.get("per_amount_bdt"))
+        per_clause = f" ({per_amt} each)" if per_amt != "the money" else ""
+        resulting = _format_bdt_amt(facts.get("resulting_balance_bdt"))
+        return (
+            f"Sure Boss! Splitting {amt_str} with {recipients}{per_clause}. "
+            f"Your new balance will be {resulting} after deducting your share. "
+            "Please confirm below to proceed."
+        )
+
     if text_kind == "review_bill":
         amt_str = _format_bdt_amt(facts.get("amount_bdt"))
         biller = facts.get("biller", "the utility")
-        return f"Boss, did you mean pay {amt_str} to {biller}?"
+        resulting = _format_bdt_amt(facts.get("resulting_balance_bdt"))
+        return (
+            f"Sure Boss! Preparing to pay {amt_str} to {biller}. "
+            f"Your new balance will be {resulting} after deducting. "
+            "Please confirm below to proceed."
+        )
+
     if text_kind == "missing_amount_send":
         recipient = facts.get("recipient", "the recipient")
-        return f"Boss, how much money would you like to send to {recipient}?"
+        return f"Sure Boss, how much money would you like to send to @{recipient}?"
     if text_kind == "missing_recipient_send":
         amt_str = _format_bdt_amt(facts.get("amount_bdt"))
-        return f"Boss, who would you like to send {amt_str} to?"
+        return f"Sure Boss, who would you like to send {amt_str} to?"
     if text_kind == "missing_details_send":
-        return "Boss, how much money would you like to send and to whom?"
+        return "Sure Boss, how much money would you like to send and to whom?"
     if text_kind == "missing_amount_request":
         recipient = facts.get("recipient") or facts.get("payer", "the recipient")
-        return f"Boss, how much money would you like to request from {recipient}?"
+        return f"Sure Boss, how much money would you like to request from @{recipient}?"
     if text_kind == "missing_recipient_request":
         amt_str = _format_bdt_amt(facts.get("amount_bdt"))
-        return f"Boss, who would you like to request {amt_str} from?"
+        return f"Sure Boss, who would you like to request {amt_str} from?"
     if text_kind == "missing_details_request":
-        return "Boss, how much would you like to request and from whom?"
+        return "Sure Boss, how much would you like to request and from whom?"
     if text_kind == "missing_recipients_split":
         amt_str = _format_bdt_amt(facts.get("total_amount_bdt"))
-        return f"Boss, who would you like to split {amt_str} with?"
+        return f"Sure Boss, who would you like to split {amt_str} with?"
     if text_kind == "missing_amount_split":
         recipients = ", ".join(facts.get("recipients", []))
-        return f"Boss, how much would you like to split with {recipients}?"
+        return f"Sure Boss, how much would you like to split with {recipients}?"
     if text_kind == "missing_budget_details":
-        return "Boss, what festival or goal is this budget for, and how much would you like to set?"
+        return "Sure Boss, what festival or goal is this budget for, and how much would you like to set?"
     if text_kind == "executed_send":
+        sub_action = facts.get("sub_action") or "send"
+        if sub_action == "recharge":
+            return (
+                f"Done, Boss. Recharged ৳{facts.get('amount_bdt')} for "
+                f"@{facts.get('recipient')}. "
+                f"New balance: ৳{facts.get('new_balance_bdt')}."
+            )
+        elif sub_action == "cash_out":
+            return (
+                f"Done, Boss. Cashed out ৳{facts.get('amount_bdt')} to "
+                f"Agent @{facts.get('recipient')}. "
+                f"New balance: ৳{facts.get('new_balance_bdt')}."
+            )
         return (
             f"Done, Boss. Sent ৳{facts.get('amount_bdt')} to "
-            f"{facts.get('recipient')}. "
+            f"@{facts.get('recipient')}. "
             f"New balance: ৳{facts.get('new_balance_bdt')}."
         )
     if text_kind == "executed_split":
@@ -1040,9 +1157,12 @@ def _deterministic_phrase(text_kind: str, facts: dict) -> str:
         c = facts.get("candidates") or []
         return f"Did you mean one of: {', '.join(c)}?"
     if text_kind == "unknown_recipient":
+        raw = facts.get("raw") or "that user"
+        known_list = facts.get("known") or []
+        known_str = ", ".join(f"@{h}" for h in known_list) if known_list else "@bikash, @rishad, @arman, @tahzib, @srijan, @mahdin, @rahim"
         return (
-            f"I don't know anyone called {facts.get('raw')!r}. "
-            f"Try one of: {', '.join(facts.get('known') or [])}."
+            f"Sorry Boss, we have current limitations: '{raw}' is outside our registered system. "
+            f"You can send, recharge, cashout, send money, or split money with these particular users: {known_str}."
         )
     if text_kind == "balance":
         return f"Let me check, Boss — your current balance is ৳{facts.get('balance_bdt')}."

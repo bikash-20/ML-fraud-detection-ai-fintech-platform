@@ -68,6 +68,47 @@ def get_recent_spending(session: Session, user_id: int, days: int = 30) -> Dict[
     }
 
 
+def get_user_limits_and_tier(session: Session, user_id: int) -> Dict[str, Any]:
+    """Retrieve live tier, regulatory limits, and today's usage for AI assistant responses."""
+    user, account = _get_user_and_account(session, user_id)
+    from ..tier_config import get_effective_limits, get_effective_tier
+    eff_tier = get_effective_tier(
+        getattr(user, "account_tier", None) or getattr(user, "tier", "personal"),
+        getattr(user, "kyc_status", "unverified"),
+    )
+    limits = get_effective_limits(
+        eff_tier,
+        getattr(user, "kyc_status", "unverified"),
+        custom_single=float(user.single_txn_limit) if getattr(user, "single_txn_limit", None) else None,
+        custom_daily=float(user.daily_limit) if getattr(user, "daily_limit", None) else None,
+        user_type=getattr(user, "user_type", None),
+    )
+    # Today's completed outbound spend
+    start_of_day = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    spent_today = session.query(func.coalesce(func.sum(Transaction.amount_bdt), Decimal("0.00"))).filter(
+        Transaction.from_account_id == account.id,
+        Transaction.status == TxnStatus.COMPLETED.value,
+        Transaction.created_at >= start_of_day,
+    ).scalar()
+
+    single_cap = float(limits["single_txn_limit"])
+    daily_cap = float(limits["daily_limit"])
+    remaining = max(0.0, daily_cap - float(spent_today))
+
+    return {
+        "user_handle": user.handle,
+        "user_type": getattr(user, "user_type", "student") or "student",
+        "account_tier": getattr(user, "account_tier", "personal") or getattr(user, "tier", "personal") or "personal",
+        "effective_tier": eff_tier,
+        "kyc_status": getattr(user, "kyc_status", "unverified") or "unverified",
+        "single_limit_bdt": single_cap,
+        "daily_limit_bdt": daily_cap,
+        "spent_today_bdt": float(spent_today),
+        "remaining_today_bdt": remaining,
+        "text": f"Boss, your account is operating under {eff_tier.capitalize()} Tier limits ({getattr(user, 'user_type', 'student').capitalize()} profile, KYC {getattr(user, 'kyc_status', 'unverified')}). Your single transaction transfer cap is ৳{single_cap:,.2f} and your daily transfer cap is ৳{daily_cap:,.2f}. You have spent ৳{float(spent_today):,.2f} today, leaving ৳{remaining:,.2f} available for outbound transfers today.",
+    }
+
+
 def get_where_spent(session: Session, user_id: int, limit: int = 10) -> Dict[str, Any]:
     """Breakdown of where the user spent their money recently (billers, counterparties, tags)."""
     user, account = _get_user_and_account(session, user_id)

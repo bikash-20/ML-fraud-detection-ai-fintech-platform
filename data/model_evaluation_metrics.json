@@ -1,0 +1,403 @@
+{
+  "model": "LGBMClassifier(colsample_bytree=0.85, learning_rate=0.035, max_depth=6,\n               n_estimators=400, random_state=42,\n               scale_pos_weight=232.4008908685969, subsample=0.85,\n               verbosity=-1)",
+  "feature_cols": [
+    "amount_bdt",
+    "drain_ratio",
+    "amount_to_avg_ratio",
+    "has_history",
+    "txns_1h",
+    "txns_24h",
+    "sum_24h",
+    "is_new_recipient",
+    "rapid_seconds",
+    "is_night_hours",
+    "recipient_account_age_days",
+    "recipient_fan_in_count_24h",
+    "account_tier",
+    "is_trusted_recipient",
+    "recipient_registered_age_hours",
+    "txn_vs_tier_limit_ratio"
+  ],
+  "optimal_threshold": 0.9715485518904232,
+  "medium_threshold": 0.43719684835069045,
+  "three_way_comparison": {
+    "legacy_rules": {
+      "metrics": {
+        "pr_auc": 0.1475,
+        "roc_auc": 0.909,
+        "precision": 0.0203,
+        "precision_pct": "2.03%",
+        "recall": 0.7342,
+        "recall_pct": "73.42%",
+        "f1": 0.0395,
+        "alerts_fired": 8025
+      },
+      "cost": {
+        "true_positives": 163,
+        "false_positives": 7862,
+        "false_negatives": 59,
+        "true_negatives": 36829,
+        "cost_missed_fraud_bdt": 531000.0,
+        "cost_false_alarm_bdt": 393100.0,
+        "total_cost_bdt": 924100.0
+      }
+    },
+    "lightgbm_only": {
+      "metrics": {
+        "pr_auc": 0.8212,
+        "roc_auc": 0.9883,
+        "precision": 0.9345,
+        "precision_pct": "93.45%",
+        "recall": 0.7072,
+        "recall_pct": "70.72%",
+        "f1": 0.8051,
+        "alerts_fired": 168
+      },
+      "cost": {
+        "true_positives": 157,
+        "false_positives": 11,
+        "false_negatives": 65,
+        "true_negatives": 44680,
+        "cost_missed_fraud_bdt": 585000.0,
+        "cost_false_alarm_bdt": 550.0,
+        "total_cost_bdt": 585550.0
+      }
+    },
+    "refined_hybrid": {
+      "metrics": {
+        "pr_auc": 0.8212,
+        "roc_auc": 0.9883,
+        "precision": 0.9345,
+        "precision_pct": "93.45%",
+        "recall": 0.7072,
+        "recall_pct": "70.72%",
+        "f1": 0.8051,
+        "alerts_fired": 168
+      },
+      "cost": {
+        "true_positives": 157,
+        "false_positives": 11,
+        "false_negatives": 65,
+        "true_negatives": 44680,
+        "cost_missed_fraud_bdt": 585000.0,
+        "cost_false_alarm_bdt": 550.0,
+        "total_cost_bdt": 585550.0
+      }
+    }
+  },
+  "rule_diagnosis": {
+    "RULE_ABSOLUTE_HARD_CAP (>5M BDT)": {
+      "alerts_fired": 0,
+      "true_positives": 0,
+      "false_positives": 0,
+      "precision": 0.0,
+      "precision_pct": "0.00%",
+      "incremental_tp": 0,
+      "incremental_recall": 0.0,
+      "incremental_recall_pct": "0.00%"
+    },
+    "RULE_TIER_CAP (Outbound 50k/100k/1M)": {
+      "alerts_fired": 13,
+      "true_positives": 13,
+      "false_positives": 0,
+      "precision": 1.0,
+      "precision_pct": "100.00%",
+      "incremental_tp": 0,
+      "incremental_recall": 0.0,
+      "incremental_recall_pct": "0.00%"
+    },
+    "RULE_NEW_ACCOUNT_LIMIT (<7d & >tier limit)": {
+      "alerts_fired": 38,
+      "true_positives": 1,
+      "false_positives": 37,
+      "precision": 0.0263,
+      "precision_pct": "2.63%",
+      "incremental_tp": 0,
+      "incremental_recall": 0.0,
+      "incremental_recall_pct": "0.00%"
+    },
+    "RULE_BUSINESS_UNAPPROVED (>150k novel payee)": {
+      "alerts_fired": 8,
+      "true_positives": 7,
+      "false_positives": 1,
+      "precision": 0.875,
+      "precision_pct": "87.50%",
+      "incremental_tp": 0,
+      "incremental_recall": 0.0,
+      "incremental_recall_pct": "0.00%"
+    },
+    "RULE_MULE_PERSONAL_FAN_IN (fan-in >= 4)": {
+      "alerts_fired": 243,
+      "true_positives": 7,
+      "false_positives": 236,
+      "precision": 0.0288,
+      "precision_pct": "2.88%",
+      "incremental_tp": 2,
+      "incremental_recall": 0.009,
+      "incremental_recall_pct": "0.90%"
+    },
+    "RULE_VELOCITY_1H (>=4 txns)": {
+      "alerts_fired": 38,
+      "true_positives": 32,
+      "false_positives": 6,
+      "precision": 0.8421,
+      "precision_pct": "84.21%",
+      "incremental_tp": 2,
+      "incremental_recall": 0.009,
+      "incremental_recall_pct": "0.90%"
+    },
+    "RULE_AMOUNT_DEV (>=4x & >=3k)": {
+      "alerts_fired": 1070,
+      "true_positives": 153,
+      "false_positives": 917,
+      "precision": 0.143,
+      "precision_pct": "14.30%",
+      "incremental_tp": 42,
+      "incremental_recall": 0.1892,
+      "incremental_recall_pct": "18.92%"
+    },
+    "RULE_DRAIN_NEW_REC (>=85% & new)": {
+      "alerts_fired": 1522,
+      "true_positives": 80,
+      "false_positives": 1442,
+      "precision": 0.0526,
+      "precision_pct": "5.26%",
+      "incremental_tp": 24,
+      "incremental_recall": 0.1081,
+      "incremental_recall_pct": "10.81%"
+    },
+    "RULE_NIGHT_HIGH_VAL (>=10k & night)": {
+      "alerts_fired": 381,
+      "true_positives": 8,
+      "false_positives": 373,
+      "precision": 0.021,
+      "precision_pct": "2.10%",
+      "incremental_tp": 4,
+      "incremental_recall": 0.018,
+      "incremental_recall_pct": "1.80%"
+    }
+  },
+  "per_tier_and_agent": {
+    "Personal (Tier 0)": {
+      "total_transactions": 6562,
+      "total_fraud": 108,
+      "detected_fraud": 81,
+      "false_alarms": 6,
+      "precision_pct": "93.10%",
+      "recall_pct": "75.00%",
+      "f1": 0.8308,
+      "false_alarm_rate_legit_pct": "0.09%"
+    },
+    "Personal Large (>20k)": {
+      "total_transactions": 223,
+      "total_fraud": 70,
+      "detected_fraud": 52,
+      "false_alarms": 4,
+      "precision_pct": "92.86%",
+      "recall_pct": "74.29%",
+      "f1": 0.8254,
+      "false_alarm_rate_legit_pct": "2.61%"
+    },
+    "Verified Consumer (Salaried)": {
+      "total_transactions": 10417,
+      "total_fraud": 53,
+      "detected_fraud": 35,
+      "false_alarms": 4,
+      "precision_pct": "89.74%",
+      "recall_pct": "66.04%",
+      "f1": 0.7609,
+      "false_alarm_rate_legit_pct": "0.04%"
+    },
+    "Verified Merchant/Agent": {
+      "total_transactions": 24406,
+      "total_fraud": 36,
+      "detected_fraud": 17,
+      "false_alarms": 0,
+      "precision_pct": "100.00%",
+      "recall_pct": "47.22%",
+      "f1": 0.6415,
+      "false_alarm_rate_legit_pct": "0.00%"
+    },
+    "Agent Large Liquidity (>100k)": {
+      "total_transactions": 1,
+      "total_fraud": 1,
+      "detected_fraud": 1,
+      "false_alarms": 0,
+      "precision_pct": "100.00%",
+      "recall_pct": "100.00%",
+      "f1": 1.0,
+      "false_alarm_rate_legit_pct": "0.00%"
+    },
+    "Business Enterprise (Tier 2)": {
+      "total_transactions": 3528,
+      "total_fraud": 25,
+      "detected_fraud": 24,
+      "false_alarms": 1,
+      "precision_pct": "96.00%",
+      "recall_pct": "96.00%",
+      "f1": 0.96,
+      "false_alarm_rate_legit_pct": "0.03%"
+    },
+    "Business Large Transfers (>150k)": {
+      "total_transactions": 3168,
+      "total_fraud": 7,
+      "detected_fraud": 7,
+      "false_alarms": 1,
+      "precision_pct": "87.50%",
+      "recall_pct": "100.00%",
+      "f1": 0.9333,
+      "false_alarm_rate_legit_pct": "0.03%"
+    }
+  },
+  "per_archetype_recall": {
+    "account_takeover": {
+      "total_cases": 50,
+      "detected_cases": 33,
+      "recall": 0.66,
+      "recall_pct": "66.0%",
+      "ci_95": [
+        0.52,
+        0.78
+      ],
+      "ci_95_str": "[52.0%, 78.0%]",
+      "is_low_sample": false
+    },
+    "cold_start_large": {
+      "total_cases": 12,
+      "detected_cases": 12,
+      "recall": 1.0,
+      "recall_pct": "100.0%",
+      "ci_95": [
+        1.0,
+        1.0
+      ],
+      "ci_95_str": "[100.0%, 100.0%]",
+      "is_low_sample": true
+    },
+    "hard_negative": {
+      "total_cases": 2,
+      "detected_cases": 0,
+      "recall": 0.0,
+      "recall_pct": "0.0%",
+      "ci_95": [
+        0.0,
+        0.0
+      ],
+      "ci_95_str": "[0.0%, 0.0%]",
+      "is_low_sample": true
+    },
+    "impersonated_supplier": {
+      "total_cases": 6,
+      "detected_cases": 6,
+      "recall": 1.0,
+      "recall_pct": "100.0%",
+      "ci_95": [
+        1.0,
+        1.0
+      ],
+      "ci_95_str": "[100.0%, 100.0%]",
+      "is_low_sample": true
+    },
+    "mule_fan_in_fan_out": {
+      "total_cases": 46,
+      "detected_cases": 21,
+      "recall": 0.4565,
+      "recall_pct": "45.7%",
+      "ci_95": [
+        0.3043,
+        0.587
+      ],
+      "ci_95_str": "[30.4%, 58.7%]",
+      "is_low_sample": false
+    },
+    "new_account_abuse": {
+      "total_cases": 16,
+      "detected_cases": 15,
+      "recall": 0.9375,
+      "recall_pct": "93.8%",
+      "ci_95": [
+        0.8125,
+        1.0
+      ],
+      "ci_95_str": "[81.2%, 100.0%]",
+      "is_low_sample": true
+    },
+    "structuring": {
+      "total_cases": 44,
+      "detected_cases": 37,
+      "recall": 0.8409,
+      "recall_pct": "84.1%",
+      "ci_95": [
+        0.7273,
+        0.9318
+      ],
+      "ci_95_str": "[72.7%, 93.2%]",
+      "is_low_sample": false
+    },
+    "velocity_burst": {
+      "total_cases": 46,
+      "detected_cases": 33,
+      "recall": 0.7174,
+      "recall_pct": "71.7%",
+      "ci_95": [
+        0.587,
+        0.8478
+      ],
+      "ci_95_str": "[58.7%, 84.8%]",
+      "is_low_sample": false
+    },
+    "hard_negative_specificity": {
+      "total_cases": 2909,
+      "correctly_cleared": 2900,
+      "specificity": 0.9969,
+      "specificity_pct": "99.7%",
+      "ci_95": [
+        0.9948,
+        0.9986
+      ],
+      "ci_95_str": "[99.5%, 99.9%]",
+      "is_low_sample": false
+    }
+  },
+  "feature_ablation": {
+    "full_features": {
+      "cols_count": 16,
+      "metrics": {
+        "pr_auc": 0.8212,
+        "roc_auc": 0.9883,
+        "precision": 0.9345,
+        "precision_pct": "93.45%",
+        "recall": 0.7072,
+        "recall_pct": "70.72%",
+        "f1": 0.8051,
+        "alerts_fired": 168
+      },
+      "threshold": 0.9715
+    },
+    "ablated_features": {
+      "cols_count": 13,
+      "removed_cols": [
+        "is_trusted_recipient",
+        "txn_vs_tier_limit_ratio",
+        "recipient_registered_age_hours"
+      ],
+      "metrics": {
+        "pr_auc": 0.5678,
+        "roc_auc": 0.9838,
+        "precision": 0.6946,
+        "precision_pct": "69.46%",
+        "recall": 0.5225,
+        "recall_pct": "52.25%",
+        "f1": 0.5964,
+        "alerts_fired": 167
+      },
+      "threshold": 0.9306
+    },
+    "delta": {
+      "pr_auc_drop": 0.2534,
+      "f1_drop": 0.2087,
+      "precision_drop": 0.2399,
+      "recall_drop": 0.1847
+    }
+  }
+}

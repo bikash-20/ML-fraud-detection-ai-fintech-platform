@@ -9,3 +9,7 @@ edge-tts>=6.1
 mlx-audio>=0.2          # Apple Silicon TTS (Qwen3-TTS)
 pytest>=8.0
 python-multipart>=0.0.9
+pandas>=2.2
+scikit-learn>=1.4
+lightgbm>=4.3
+joblib>=1.3

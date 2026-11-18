@@ -45,10 +45,10 @@ export function HistoryList({ txns }: { txns: Txn[] }) {
                 {isIn ? "↓" : "↑"}
               </div>
               <div className="min-w-0 flex-1">
-                <div className="text-cream text-sm font-medium truncate">
+                <div className="text-cream text-base font-semibold truncate">
                   {counterpartyDisplay}
                 </div>
-                <div className="text-xs text-lavender">
+                <div className="text-xs text-lavender font-medium">
                   {t.kind === "split_child" ? "split" : t.kind} · completed
                   {t.note ? ` · ${t.note}` : ""}
                 </div>
@@ -56,8 +56,8 @@ export function HistoryList({ txns }: { txns: Txn[] }) {
             </div>
             <div
               className={
-                "text-base font-semibold tabular-nums shrink-0 " +
-                (isIn ? "text-peach-500" : "text-cream/90")
+                "text-lg font-bold tabular-nums shrink-0 " +
+                (isIn ? "text-peach-500" : "text-cream")
               }
             >
               {isIn ? "+" : "−"}৳

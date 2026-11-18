@@ -1,6 +1,6 @@
 "use client";
 
-import { PendingRequest } from "@/lib/api";
+import { PendingRequest, maskPhone } from "@/lib/api";
 
 export function PendingRequests({
   items,
@@ -30,23 +30,23 @@ export function PendingRequests({
             className="flex items-center justify-between gap-3 p-3 rounded-lg bg-white/5 border border-white/10"
           >
             <div className="min-w-0 flex-1">
-              <div className="text-cream text-sm font-medium">
-                <span className="text-peach-500">{r.asker_handle}</span> asks
+              <div className="text-cream text-base font-semibold">
+                <span className="text-peach-500 font-bold">{r.asker_handle}</span> asks
                 you for ৳{Number(r.amount_bdt).toLocaleString("en-IN")}
               </div>
-              <div className="text-xs text-lavender">{r.asker_phone}</div>
+              <div className="text-xs text-lavender font-mono font-medium">{maskPhone(r.asker_phone)}</div>
               {r.note ? (
                 <div className="text-xs text-secondary mt-0.5 italic">
                   &ldquo;{r.note}&rdquo;
                 </div>
               ) : null}
             </div>
-            <div className="flex gap-1.5 shrink-0">
+            <div className="flex gap-2 shrink-0">
               <button
                 type="button"
                 onClick={() => onPay(r.id)}
                 disabled={isPending}
-                className="btn-peach rounded-md px-3 py-1.5 text-sm disabled:opacity-40"
+                className="btn-peach rounded-lg px-4 py-2 text-sm font-bold disabled:opacity-40"
               >
                 Pay
               </button>
@@ -54,7 +54,7 @@ export function PendingRequests({
                 type="button"
                 onClick={() => onDecline(r.id)}
                 disabled={isPending}
-                className="btn-ghost rounded-md px-3 py-1.5 text-sm disabled:opacity-40"
+                className="btn-ghost rounded-lg px-3.5 py-2 text-sm font-bold disabled:opacity-40"
               >
                 ✕
               </button>

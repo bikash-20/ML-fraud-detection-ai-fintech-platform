@@ -197,10 +197,10 @@ export const ChatBar = forwardRef<
       >
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-6 text-center">
-            <div className="text-xs text-secondary mb-3">
+            <div className="text-sm text-secondary mb-3.5 font-medium">
               Ask the Financial Assistant, get budget recommendations, or run money commands:
             </div>
-            <div className="flex flex-wrap justify-center gap-1.5 max-w-md">
+            <div className="flex flex-wrap justify-center gap-2 max-w-md">
               {[
                 "💡 Budget recommendations",
                 "📊 Analyze my spending habits",
@@ -213,7 +213,7 @@ export const ChatBar = forwardRef<
                   type="button"
                   onClick={() => sendText(chip.replace(/^[^\s]+\s/, ""))}
                   disabled={busy || disabled}
-                  className="text-[11px] px-2.5 py-1 rounded-full bg-white/5 hover:bg-peach-500/20 text-cream/80 hover:text-white border border-white/10 hover:border-peach-500/30 transition-all text-left"
+                  className="text-xs px-3 py-1.5 rounded-full bg-white/5 hover:bg-peach-500/20 text-cream/90 hover:text-white border border-white/10 hover:border-peach-500/30 transition-all text-left font-medium"
                 >
                   {chip}
                 </button>
@@ -225,15 +225,15 @@ export const ChatBar = forwardRef<
             <div
               key={m.id}
               className={
-                "rounded-xl px-3 py-2 text-sm max-w-[85%] whitespace-pre-wrap " +
+                "rounded-xl px-3.5 py-2.5 text-base max-w-[85%] whitespace-pre-wrap font-medium " +
                 (m.role === "user"
                   ? "self-end bg-peach-500/20 text-cream"
-                  : "self-start bg-white/5 text-cream/90")
+                  : "self-start bg-white/5 text-cream/95")
               }
             >
               {m.role === "assistant" && !m.pending ? (
                 <span>
-                  <span className="text-peach-500/80 text-xs uppercase tracking-wider mr-2 font-mono">
+                  <span className="text-peach-500/90 text-xs uppercase tracking-wider mr-2 font-mono font-bold">
                     wallet
                   </span>
                   {m.text}
@@ -258,7 +258,7 @@ export const ChatBar = forwardRef<
           onChange={(e) => setInput(e.target.value)}
           placeholder={placeholder}
           disabled={busy || disabled}
-          className="flex-1 bg-white/5 border border-white/10 rounded-full px-4 py-2.5 text-sm text-cream placeholder:text-secondary focus:outline-none focus:border-peach-500/50"
+          className="flex-1 bg-white/5 border border-white/10 rounded-full px-4 py-3 text-base text-cream placeholder:text-secondary focus:outline-none focus:border-peach-500/50"
         />
         <VoiceButton
           disabled={micDisabled}
@@ -267,9 +267,9 @@ export const ChatBar = forwardRef<
         <button
           type="submit"
           disabled={busy || disabled || !input.trim()}
-          className="btn-peach rounded-full px-4 py-2.5 text-sm font-semibold disabled:opacity-40 flex items-center gap-1.5"
+          className="btn-peach rounded-full px-5 py-3 text-base font-bold disabled:opacity-40 flex items-center gap-1.5"
         >
-          Send <ArrowUp size={15} strokeWidth={2.2} />
+          Send <ArrowUp size={16} strokeWidth={2.4} />
         </button>
       </form>
     </div>

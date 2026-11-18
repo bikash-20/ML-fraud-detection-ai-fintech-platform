@@ -31,7 +31,7 @@ export function SessionSwitcher({
       </button>
       {open ? (
         <div className="absolute right-0 top-[calc(100%+0.6rem)] z-30 min-w-48 glass-strong rounded-2xl p-2 shadow-glass">
-          <div className="px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-secondary">
+          <div className="px-3 py-2 text-xs uppercase tracking-[0.18em] text-secondary font-bold">
             Active account
           </div>
           {users.map((u) => (
