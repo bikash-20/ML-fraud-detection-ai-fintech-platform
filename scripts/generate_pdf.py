@@ -23,7 +23,7 @@ HTML_CONTENT = r"""<!DOCTYPE html>
       padding: 0;
     }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans Bengali", "Helvetica Neue", Arial, sans-serif;
       color: #0f172a;
       background: #ffffff;
       font-size: 8.5pt;
@@ -174,8 +174,8 @@ HTML_CONTENT = r"""<!DOCTYPE html>
     .pillar-2 .pillar-header { background: #dcfce7; color: #166534; }
     .pillar-3 .pillar-header { background: #fef3c7; color: #92400e; }
     .pillar-content {
-      font-size: 7.1pt;
-      line-height: 1.23;
+      font-size: 7.0pt;
+      line-height: 1.21;
       color: #334155;
     }
 
@@ -183,11 +183,11 @@ HTML_CONTENT = r"""<!DOCTYPE html>
     table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 7.1pt;
-      margin: 3px 0 5px 0;
+      font-size: 7.0pt;
+      margin: 2.5px 0 3.5px 0;
     }
     th, td {
-      padding: 2.2px 4.5px;
+      padding: 2.0px 4.0px;
       border: 1px solid #cbd5e1;
       text-align: left;
     }
@@ -248,6 +248,10 @@ HTML_CONTENT = r"""<!DOCTYPE html>
         <div class="header-left">
           <h1>WALLET: Autonomous AI FinTech Platform</h1>
           <div class="tagline">Next-Generation Mobile Financial Intelligence & Scalable Architecture (Bangladesh BDT Context)</div>
+          <div style="font-size: 6.8pt; color: #475569; margin-top: 1.5px; font-weight: 600;">
+            <span style="color: #166534;">✅ Pages 1–2: Verified Prototype & Synthetic ML Benchmark</span> &nbsp;|&nbsp; 
+            <span style="color: #92400e;">🔲 Page 3: Forward-Looking 1M Target Architecture</span>
+          </div>
         </div>
         <div class="header-right">
           <span class="badge-primary">Technical Whitepaper</span>
@@ -256,7 +260,7 @@ HTML_CONTENT = r"""<!DOCTYPE html>
       </div>
 
       <!-- Core 3-Pillar Executive Summary -->
-      <div class="grid-3" style="margin-bottom: 5px;">
+      <div class="grid-3" style="margin-bottom: 4px;">
         <div class="pillar-box pillar-1">
           <div class="pillar-header">What We Built</div>
           <div class="pillar-content">
@@ -266,13 +270,13 @@ HTML_CONTENT = r"""<!DOCTYPE html>
         <div class="pillar-box pillar-2">
           <div class="pillar-header">What We Proved</div>
           <div class="pillar-content">
-            <strong>Empirical Data & Evaluation:</strong> LightGBM model trained on 300,000 synthetic BDT transactions (90 days, Asia/Dhaka time); achieved <strong>93.45% precision</strong>, <strong>70.72% recall</strong>, reducing simulated false alarm overhead by <strong>৳338,550</strong>; <strong>140 passing automated tests</strong>.
+            <strong>Empirical Synthetic Evaluation:</strong> LightGBM model trained on 300,000 synthetic BDT transactions (90 days, Asia/Dhaka time); achieved <strong>93.45% precision</strong>, <strong>70.72% recall</strong> (~29.3% miss rate; mitigated by tier limits & biometric step-up) on a 45,000-transaction held-out synthetic test set; <strong>140 passing automated tests</strong> (functional + scenario; see repo).
           </div>
         </div>
         <div class="pillar-box pillar-3">
           <div class="pillar-header">What Comes Next</div>
           <div class="pillar-content">
-            <strong>Million-User Scalability Plan:</strong> Proposed distributed architecture, Aurora PostgreSQL / MySQL read/write splitting, Redis feature store, dedicated GPU vLLM cluster, and phased k6 load-testing milestones <em>(proposed design; not yet load-tested)</em>.
+            <strong>Million-User Scalability Plan:</strong> Proposed distributed architecture, Aurora PostgreSQL / MySQL read/write splitting, Redis feature store, dedicated GPU vLLM cluster, and phased k6 load-testing milestones <em>(forward-looking design; not yet load-tested)</em>.
           </div>
         </div>
       </div>
@@ -285,14 +289,14 @@ HTML_CONTENT = r"""<!DOCTYPE html>
       </div>
 
       <!-- 1. Project Overview & Socio-Economic Problem Space -->
-      <div class="section-title">1. Project Overview & Socio-Economic Problem Space</div>
-      <div class="card" style="margin-bottom: 3.5px;">
-        <div style="font-size: 7.4pt; line-height: 1.25; color: #1e293b;">
+      <div class="section-title">1. Project Overview &amp; Socio-Economic Problem Space</div>
+      <div class="card" style="margin-bottom: 3px;">
+        <div style="font-size: 7.2pt; line-height: 1.22; color: #1e293b;">
           <strong>Target Problem in Bangladesh MFS:</strong> Mobile Financial Services (bKash, Nagad, Rocket) drive Bangladesh's digital economy but face severe systemic pain points: (1) heavy reliance on cumbersome USSD menus that confuse non-tech-savvy users; (2) escalating social engineering, SIM-swap, and account-takeover scams; (3) lack of budgeting guidance and financial literacy; and (4) rigid single-tier structures that exclude unbanked youth and micro-merchants.
         </div>
-        <div style="font-size: 7.3pt; line-height: 1.25; color: #1e293b; margin-top: 2px;">
+        <div style="font-size: 7.1pt; line-height: 1.22; color: #1e293b; margin-top: 1.5px;">
           <strong>Synergistic Solution Architecture:</strong> Our platform unites four essential financial pillars into a single autonomous engine:
-          <br>• <span style="color:#1d4ed8; font-weight:700;">Digital Finance:</span> Voice & chat-based payments (Send Money, Request Money, Bill Split, Mobile Recharge, Cash Out) in natural Bangla/Banglish.
+          <br>• <span style="color:#1d4ed8; font-weight:700;">Digital Finance:</span> Voice &amp; chat-based payments (Send Money, Request Money, Bill Split, Mobile Recharge, Cash Out) in natural Bangla/Banglish.
           <br>• <span style="color:#b91c1c; font-weight:700;">Fraud Detection:</span> Pre-execution LightGBM inference (&lt;0.8ms) with automated biometric step-up before balance mutations.
           <br>• <span style="color:#059669; font-weight:700;">Financial Literacy:</span> Autonomous 30-day categorization, velocity baselines, and proactive conversational spending insights.
           <br>• <span style="color:#7c3aed; font-weight:700;">Financial Inclusion:</span> Multi-persona tiers (Student, Salaried, Agent, Business) aligned with Bangladesh Bank regulations.
@@ -300,18 +304,18 @@ HTML_CONTENT = r"""<!DOCTYPE html>
       </div>
 
       <!-- 2. Existing Prototype & Core Features -->
-      <div class="section-title">2. Existing Prototype & Implemented Core Features</div>
-      <div class="grid-2" style="margin-bottom: 4px;">
+      <div class="section-title">2. Existing Prototype &amp; Implemented Core Features</div>
+      <div class="grid-2" style="margin-bottom: 3px;">
         <div class="card">
-          <div style="font-size: 8pt; font-weight: 700; color: #0f172a; margin-bottom: 2px;">Conversational Voice & Transaction Engine</div>
+          <div style="font-size: 7.8pt; font-weight: 700; color: #0f172a; margin-bottom: 1.5px;">Conversational Voice &amp; Transaction Engine</div>
           <ul>
-            <li><strong>Live DB-Grounded AI:</strong> LLM reads live DB for user balances/spending and admin triage with zero hallucinations; natural Bangla voice/chat intent parsing.</li>
-            <li><strong>Send, Request & Split Money:</strong> P2P transfers, bilateral <strong>Request Money</strong> (with payer notification inbox & 1-tap settlement approval), and atomic bill splits.</li>
-            <li><strong>Dynamic Personas & Tiers:</strong> Configurable BDT limits for Students (৳500–8k), Salaried (৳10k–60k), Agents (৳100k–500k), and Businesses (৳500k–3M).</li>
+            <li><strong>Live DB-Grounded AI:</strong> LLM answers spending, balance, and admin queries grounded in live database rows to minimize hallucinations; natural Bangla voice/chat intent parsing.</li>
+            <li><strong>Send, Request &amp; Split Money:</strong> P2P transfers, bilateral <strong>Request Money</strong> (with payer notification inbox &amp; 1-tap settlement approval), and atomic bill splits.</li>
+            <li><strong>Dynamic Personas &amp; Tiers:</strong> Configurable BDT limits for Students (৳500–8k), Salaried (৳10k–60k), Agents (৳100k–500k), and Businesses (৳500k–3M).</li>
           </ul>
         </div>
         <div class="card">
-          <div style="font-size: 8pt; font-weight: 700; color: #0f172a; margin-bottom: 2px;">Autonomous Intelligence & Biometric Security</div>
+          <div style="font-size: 7.8pt; font-weight: 700; color: #0f172a; margin-bottom: 1.5px;">Autonomous Intelligence &amp; Biometric Security</div>
           <ul>
             <li><strong>Real-Time Fraud Detection:</strong> LightGBM inference (&lt;0.8ms) across 16 causal temporal features; flags account takeover, smurfing, and drains.</li>
             <li><strong>Biometric Step-Up (Face ID):</strong> In-browser 128-d neural face embeddings with liveness checks gating flagged transfers and device shifts.</li>
@@ -322,8 +326,8 @@ HTML_CONTENT = r"""<!DOCTYPE html>
 
       <!-- 3. System Architecture Diagram (Current Working Prototype) -->
       <div class="section-title">3. System Architecture (Current Prototype to Service Tier)</div>
-      <div class="arch-diagram" style="margin-bottom: 4px; padding: 4px;">
-        <svg viewBox="0 0 760 160" style="width: 100%; height: auto; display: block; font-family: -apple-system, sans-serif;">
+      <div class="arch-diagram" style="margin-bottom: 3.5px; padding: 3.5px;">
+        <svg viewBox="0 0 760 152" style="width: 100%; height: auto; display: block; font-family: -apple-system, sans-serif;">
           <defs>
             <linearGradient id="blueGrad" x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%" stop-color="#eff6ff"/><stop offset="100%" stop-color="#dbeafe"/>
@@ -502,7 +506,7 @@ HTML_CONTENT = r"""<!DOCTYPE html>
       </div>
 
       <!-- 5. Security & Transaction Reliability -->
-      <div class="section-title">5. Security & Transaction Reliability Guarantees (Verified by 140 Automated Tests)</div>
+      <div class="section-title">5. Verified Ledger &amp; Fraud-Pipeline Properties (140 Automated Tests Passing)</div>
       <div class="card" style="margin-bottom: 5px;">
         <div style="font-size: 7.7pt; line-height: 1.3; color: #1e293b; margin-bottom: 4px;">
           Financial transactions demand strict mathematical determinism. The AI assistant never mutates balances directly; all operations flow through our deterministic ACID ledger core:
@@ -543,20 +547,21 @@ HTML_CONTENT = r"""<!DOCTYPE html>
             </tr>
             <tr>
               <td><strong>Fraud Risk Assessment</strong></td>
-              <td>Synchronous pre-authorization evaluation (&lt;0.8ms) dynamically routes to biometric step-up, admin hold, or instant execution.</td>
+              <td>Synchronous pre-authorization evaluation (&lt;0.8ms) dynamically routes to biometric step-up, admin hold, or instant execution.*</td>
               <td><code>test_ml_fraud_scenarios.py</code> (12 scenario tests)</td>
               <td class="text-center font-bold text-success">PASSED (100%)</td>
             </tr>
             <tr>
-              <td><strong>Audit Logs & Security</strong></td>
+              <td><strong>Audit Logs &amp; Security</strong></td>
               <td>Admin actions, freezes, tier upgrades, and alerts are committed to immutable append-only audit tables.</td>
               <td><code>test_admin_and_fraud.py</code> (8 security tests)</td>
               <td class="text-center font-bold text-success">PASSED (100%)</td>
             </tr>
           </tbody>
         </table>
-        <div style="padding: 2.5px 5.5px; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 4px; font-size: 7.1pt; color: #065f46;">
-          <strong>Empirical Verification Proof:</strong> Complete test suite of <strong>140 automated unit &amp; scenario tests</strong> passes with <strong>100% success</strong> in <code>pytest</code> (zero regressions).
+        <div style="padding: 2.5px 5.5px; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 4px; font-size: 7.0pt; color: #065f46; line-height: 1.2;">
+          <strong>Empirical Verification Proof:</strong> Complete test suite of <strong>140 automated tests</strong> passes with <strong>100% success</strong> in <code>pytest</code> (zero regressions).<br>
+          <span style="font-size: 6.4pt; color: #047857;">*Biometric gate routing verified in test suite; face liveness FAR/FRR not yet physically benchmarked against spoof datasets.</span>
         </div>
       </div>
 
@@ -582,7 +587,7 @@ HTML_CONTENT = r"""<!DOCTYPE html>
             <th class="text-center">PR-AUC</th>
             <th class="text-center">ROC-AUC</th>
             <th class="text-center">Precision</th>
-            <th class="text-center">Recall</th>
+            <th class="text-center">Recall (Miss Rate)</th>
             <th class="text-center">F1</th>
             <th class="text-center">Alerts (FP)</th>
             <th class="text-center">Missed Cost (FN)</th>
@@ -596,10 +601,10 @@ HTML_CONTENT = r"""<!DOCTYPE html>
             <td class="text-center">0.1475</td>
             <td class="text-center">0.9090</td>
             <td class="text-center text-danger font-bold">2.03%</td>
-            <td class="text-center font-bold">73.42%</td>
+            <td class="text-center font-bold">73.42% <span style="font-size: 5.8pt; color: #64748b;">(26.6%)</span></td>
             <td class="text-center">0.0395</td>
             <td class="text-center text-danger font-bold">8,025 (7,862)</td>
-            <td class="text-center">৳531,000 <span style="font-size: 6pt; color: #64748b;">(59)</span></td>
+            <td class="text-center">৳531,000 <span style="font-size: 5.8pt; color: #64748b;">(59)</span></td>
             <td class="text-center text-danger font-bold">৳393,100</td>
             <td class="text-center text-danger font-bold">৳924,100</td>
           </tr>
@@ -608,10 +613,10 @@ HTML_CONTENT = r"""<!DOCTYPE html>
             <td class="text-center font-bold text-success">0.8212</td>
             <td class="text-center font-bold text-success">0.9883</td>
             <td class="text-center font-bold text-success">93.45%</td>
-            <td class="text-center font-bold">70.72%</td>
+            <td class="text-center font-bold">70.72% <span style="font-size: 5.8pt; color: #64748b;">(29.3%)</span></td>
             <td class="text-center font-bold text-success">0.8051</td>
             <td class="text-center font-bold text-success">168 (11)</td>
-            <td class="text-center">৳585,000 <span style="font-size: 6pt; color: #64748b;">(65)</span></td>
+            <td class="text-center">৳585,000 <span style="font-size: 5.8pt; color: #64748b;">(65)</span></td>
             <td class="text-center text-success font-bold">৳550</td>
             <td class="text-center text-success font-bold">৳585,550</td>
           </tr>
@@ -620,17 +625,17 @@ HTML_CONTENT = r"""<!DOCTYPE html>
             <td class="text-center font-bold text-primary">0.8212</td>
             <td class="text-center font-bold text-primary">0.9883</td>
             <td class="text-center font-bold text-primary">93.45%</td>
-            <td class="text-center font-bold">70.72%</td>
+            <td class="text-center font-bold">70.72% <span style="font-size: 5.8pt; color: #64748b;">(29.3%)</span></td>
             <td class="text-center font-bold text-primary">0.8051</td>
             <td class="text-center font-bold text-primary">168 (11)</td>
-            <td class="text-center">৳585,000 <span style="font-size: 6pt; color: #64748b;">(65)</span></td>
+            <td class="text-center">৳585,000 <span style="font-size: 5.8pt; color: #64748b;">(65)</span></td>
             <td class="text-center text-primary font-bold">৳550</td>
             <td class="text-center text-primary font-bold">৳585,550</td>
           </tr>
         </tbody>
       </table>
-      <div style="font-size: 6.6pt; color: #64748b; margin-top: -2px; margin-bottom: 4px; line-height: 1.24;">
-        *Cost model assumptions: Missed fraud = ৳9,000 avg loss; False alarm review = ৳50 investigator time (evaluated on 45,000 test transactions, 222 frauds). Why LightGBM & Hybrid match on this test split: In our synthetic split, LightGBM captured all 13 tier-cap violations. In production, Refined Hybrid retains regulatory hard rules as a zero-trust fail-safe against adversarial drift.
+      <div style="font-size: 6.3pt; color: #64748b; margin-top: -2px; margin-bottom: 3px; line-height: 1.2;">
+        *Cost model assumptions: Missed fraud = ৳9,000 avg loss; False alarm review = ৳50 investigator time (evaluated on 45,000 synthetic test transactions, 222 frauds). 70.72% recall leaves ~29.3% residual fraud unflagged by ML alone; this risk is actively mitigated by defense-in-depth: regulatory tier caps, new-account ceilings, and biometric step-up (§5). In our synthetic split, LightGBM caught all 13 tier-cap breaches, matching Hybrid scores; in production, Refined Hybrid preserves hard rules as an unbypassable fail-safe against adversarial drift.
       </div>
 
       <!-- Key Insights & Archetype Breakdown -->
@@ -683,12 +688,12 @@ HTML_CONTENT = r"""<!DOCTYPE html>
       </div>
 
       <!-- Scope Disclaimer Notice -->
-      <div class="card card-warning" style="margin-bottom: 5px;">
-        <div style="font-size: 7.6pt; font-weight: 700; color: #854d0e; margin-bottom: 1.5px;">
-          ENGINEERING TRANSPARENCY & LOAD-TESTING STATUS NOTICE
+      <div class="card card-warning" style="margin-bottom: 4px; padding: 4px 8px;">
+        <div style="font-size: 7.5pt; font-weight: 700; color: #854d0e; margin-bottom: 1.5px;">
+          ENGINEERING TRANSPARENCY &amp; LOAD-TESTING STATUS NOTICE (FORWARD-LOOKING TARGET DESIGN)
         </div>
-        <div style="font-size: 7.3pt; line-height: 1.26; color: #713f12;">
-          The scalability metrics, concurrency figures, and multi-node architectures presented on this page represent a <strong>proposed engineering design, capacity planning model, and phased testing roadmap</strong>. While our prototype is fully verified through functional tests (140 passed) and synthetic datasets, it has <strong>not yet been subjected to physical multi-node load testing at 1,000,000 user concurrency</strong>. These figures serve as our target engineering milestones for production deployment.
+        <div style="font-size: 7.1pt; line-height: 1.25; color: #713f12;">
+          <strong>Notice: This page represents forward-looking architectural design and capacity planning; all empirically verified prototype claims are on Pages 1–2.</strong> The scalability metrics and multi-node architectures presented here represent a <strong>proposed engineering roadmap and capacity planning model</strong>. While our prototype is fully verified through functional tests (140 passed) and synthetic datasets, it has <strong>not yet been subjected to physical multi-node load testing at 1,000,000 concurrency</strong>.
         </div>
       </div>
 
