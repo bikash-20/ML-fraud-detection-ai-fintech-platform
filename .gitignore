@@ -33,3 +33,13 @@ frontend/tsconfig.tsbuildinfo
 *.safetensors
 .cache/
 .vercel
+
+# Project proposal documents & presentation scripts (kept local only)
+*proposal*.pdf
+*PROPOSAL*.pdf
+docs/proposal.html
+docs/proposal_page_*.png
+script.md
+*script*.md
+video_presentation_script.md
+

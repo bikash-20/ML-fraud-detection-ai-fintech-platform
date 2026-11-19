@@ -198,22 +198,22 @@ export async function speak(text: string): Promise<Blob> {
 async function fetchWithRetry(
   url: string,
   options: RequestInit,
-  retries = 2,
-  delay = 2000
+  retries = 3,
+  delay = 2500
 ): Promise<Response> {
   try {
     const res = await fetch(url, options);
     if ((res.status === 502 || res.status === 503 || res.status === 504) && retries > 0) {
       console.warn(`[API] Backend returned ${res.status} (container waking up?), retrying in ${delay}ms...`);
       await new Promise((r) => setTimeout(r, delay));
-      return fetchWithRetry(url, options, retries - 1, delay * 1.5);
+      return fetchWithRetry(url, options, retries - 1, delay * 1.3);
     }
     return res;
   } catch (err) {
     if (retries > 0) {
       console.warn(`[API] Fetch error for ${url}, retrying in ${delay}ms...`, err);
       await new Promise((r) => setTimeout(r, delay));
-      return fetchWithRetry(url, options, retries - 1, delay * 1.5);
+      return fetchWithRetry(url, options, retries - 1, delay * 1.3);
     }
     throw err;
   }

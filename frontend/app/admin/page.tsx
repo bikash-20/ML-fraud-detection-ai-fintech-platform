@@ -481,7 +481,15 @@ export default function AdminDashboardPage() {
       }
     } catch (e) {
       setAiLoading(false);
-      const errText = `Query error: ${(e as Error).message}. Please ensure the backend is active.`;
+      const rawMsg = (e as Error).message || "";
+      const isColdStart =
+        rawMsg.includes("502") ||
+        rawMsg.includes("503") ||
+        rawMsg.includes("504") ||
+        rawMsg.includes("Failed to fetch");
+      const errText = isColdStart
+        ? "Render cloud backend was waking up from idle sleep (~30s). It is now online — please ask your question again!"
+        : `Query error: ${rawMsg}. Please ensure the backend is active.`;
       setAiChatHistory((prev) => [
         ...prev,
         {
@@ -491,7 +499,11 @@ export default function AdminDashboardPage() {
         },
       ]);
       if (!isVoiceMuted) {
-        speakText("Sorry Boss, an error occurred while connecting to the database.");
+        speakText(
+          isColdStart
+            ? "Boss, the backend was spinning up from sleep and is now ready. Please tap the microphone or send your request again."
+            : "Sorry Boss, an error occurred while connecting to the database."
+        );
       }
     }
   }
