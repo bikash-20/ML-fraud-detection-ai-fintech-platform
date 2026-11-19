@@ -895,10 +895,24 @@ export default function AdminDashboardPage() {
                         #{t.id}
                       </td>
                       <td className="px-4 py-3.5 text-cream font-bold text-sm">
-                        @{t.sender?.handle ?? "unknown"}
+                        {t.kind === "cash_in" ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-semibold text-xs whitespace-nowrap">
+                            <span>🏦</span> Cash-In / Deposit
+                          </span>
+                        ) : (
+                          `@${t.sender?.handle ?? "unknown"}`
+                        )}
                       </td>
                       <td className="px-4 py-3.5 text-lavender font-medium text-sm">
-                        {t.recipient?.handle ? `@${t.recipient.handle}` : "External/Biller"}
+                        {t.kind === "cash_out" ? (
+                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-amber-300 font-semibold text-xs whitespace-nowrap">
+                            <span>🏧</span> MFS Agent Cash-Out
+                          </span>
+                        ) : t.recipient?.handle ? (
+                          `@${t.recipient.handle}`
+                        ) : (
+                          "External/Biller"
+                        )}
                       </td>
                       <td className="px-4 py-3.5 font-mono font-bold text-cream text-base">
                         <div>
@@ -2076,8 +2090,27 @@ export default function AdminDashboardPage() {
               <div>Kind: <span className="text-cream uppercase font-semibold">{selectedTxn.kind}</span></div>
               <div>Amount: <span className="text-peach-400 font-bold font-mono">৳{selectedTxn.amount_bdt}</span></div>
               <div>Status: <span className="text-cream">{selectedTxn.status}</span></div>
-              <div>Sender: <span className="text-cream font-mono">@{selectedTxn.sender?.handle}</span> ({maskPhone(selectedTxn.sender?.phone)})</div>
-              <div>Recipient: <span className="text-cream font-mono">{selectedTxn.recipient?.handle ?? "N/A"}</span></div>
+              <div>
+                Sender:{" "}
+                <span className="text-cream font-mono font-semibold">
+                  {selectedTxn.kind === "cash_in"
+                    ? "🏦 Cash-In / Opening Deposit"
+                    : `@${selectedTxn.sender?.handle ?? "unknown"}`}
+                </span>{" "}
+                {selectedTxn.kind !== "cash_in" && selectedTxn.sender?.phone && (
+                  <span>({maskPhone(selectedTxn.sender.phone)})</span>
+                )}
+              </div>
+              <div>
+                Recipient:{" "}
+                <span className="text-cream font-mono font-semibold">
+                  {selectedTxn.kind === "cash_out"
+                    ? "🏧 MFS Agent Cash-Out"
+                    : selectedTxn.recipient?.handle
+                    ? `@${selectedTxn.recipient.handle}`
+                    : "N/A"}
+                </span>
+              </div>
               <div>Created: <span className="text-cream">{new Date(selectedTxn.created_at).toLocaleString()}</span></div>
               {selectedTxn.note && <div>Note: <span className="text-cream">{selectedTxn.note}</span></div>}
             </div>
