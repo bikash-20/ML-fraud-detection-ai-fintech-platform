@@ -407,37 +407,75 @@ def get_history(user_id: int, limit: int = 50) -> HistoryResponse:
 def _build_timeline(
     s: Session, account_id: int, current_balance: Decimal, days: int = 14
 ) -> list[dict]:
-    """Reverse-walk the last N days of transactions to compute end-of-day balance."""
-    cutoff = _utcnow() - timedelta(days=days)
+    """Build a balance timeline across the last N days.
+
+    Includes daily baseline points for days without activity, plus progressive
+    points for every completed transaction so intraday sends, receives, bill
+    payments, and splits immediately bend and update the chart.
+    """
+    now = _utcnow()
+    cutoff = now - timedelta(days=days)
     txns = (
         s.query(Transaction)
         .filter(
             (Transaction.from_account_id == account_id)
             | (Transaction.to_account_id == account_id),
+            Transaction.status == TxnStatus.COMPLETED.value,
             Transaction.completed_at.isnot(None),
             Transaction.completed_at >= cutoff,
         )
         .order_by(Transaction.completed_at.asc())
         .all()
     )
-    # Walk backward from current_balance, applying the inverse of each
-    # completed transaction as we move to earlier days.
-    running = current_balance
-    today = _utcnow().date()
-    by_day: dict = {}
-    idx = len(txns) - 1
-    for d_offset in range(0, days + 1):
+
+    # Walk backward from current_balance to calculate balance after each transaction
+    # and the starting balance before the 14-day window.
+    post_balances: list[tuple[Transaction, Decimal]] = []
+    running = Decimal(str(current_balance))
+    for t in reversed(txns):
+        post_balances.append((t, running))
+        if t.from_account_id == account_id and t.to_account_id == account_id:
+            pass
+        elif t.from_account_id == account_id:
+            running += t.amount_bdt
+        elif t.to_account_id == account_id:
+            running -= t.amount_bdt
+
+    post_balances.reverse()
+    # Stored value wallet cannot be negative
+    start_balance = max(Decimal("0.00"), running)
+    today = now.date()
+
+    # Group completed transactions by calendar date
+    by_date: dict[str, list[tuple[Transaction, Decimal]]] = {}
+    for t, bal in post_balances:
+        d_key = t.completed_at.date().isoformat()
+        by_date.setdefault(d_key, []).append((t, max(Decimal("0.00"), bal)))
+
+    timeline: list[dict] = []
+    cur_bal = start_balance
+
+    for d_offset in range(days, -1, -1):
         day = today - timedelta(days=d_offset)
-        by_day[day.isoformat()] = float(running)
-        while idx >= 0 and txns[idx].completed_at.date() == day:
-            txn = txns[idx]
-            if txn.from_account_id == account_id:
-                running += txn.amount_bdt
-            elif txn.to_account_id == account_id:
-                running -= txn.amount_bdt
-            idx -= 1
-    by_day = dict(reversed(list(by_day.items())))
-    return [{"date": d, "balance": round(b, 2)} for d, b in by_day.items()]
+        d_str = day.isoformat()
+        if d_str in by_date:
+            day_txns = by_date[d_str]
+            # Add opening anchor for the day so intraday fluctuations start from prior closing
+            timeline.append({"date": f"{d_str} 00:00", "balance": float(round(cur_bal, 2))})
+            for t, bal in day_txns:
+                t_label = t.completed_at.strftime("%Y-%m-%d %H:%M")
+                timeline.append({"date": t_label, "balance": float(round(bal, 2))})
+                cur_bal = bal
+        else:
+            timeline.append({"date": d_str, "balance": float(round(cur_bal, 2))})
+
+    # Defensive guarantee: the timeline's final element must strictly match current_balance
+    if timeline:
+        timeline[-1]["balance"] = float(round(current_balance, 2))
+    else:
+        timeline.append({"date": today.isoformat(), "balance": float(round(current_balance, 2))})
+
+    return timeline
 
 
 @router.get("/users/{user_id}/savings-goals", response_model=list[SavingsGoalOut])

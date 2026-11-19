@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import json
 import random
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 from sqlalchemy.orm import Session
@@ -87,9 +87,10 @@ def seed(session: Session) -> dict:
         session.add(acct)
         session.flush()
 
-        # Create opening cash_in ledger transaction
+        # Create opening cash_in ledger transaction backdated by 45 days so 14-day history is established
+        opening_time = _utcnow() - timedelta(days=45)
         session.add(Transaction(
-            idempotency_key=f"seed-opening-{user.id}-{int(_utcnow().timestamp())}",
+            idempotency_key=f"seed-opening-{user.id}-{int(opening_time.timestamp())}",
             initiator_user_id=user.id,
             from_account_id=None,
             to_account_id=acct.id,
@@ -97,10 +98,24 @@ def seed(session: Session) -> dict:
             kind="cash_in",
             status="completed",
             note=f"Initial {spec['user_type'].capitalize()} Deposit",
-            created_at=_utcnow(),
-            completed_at=_utcnow(),
+            created_at=opening_time,
+            completed_at=opening_time,
         ))
         user_count += 1
+
+    # Backfill any existing opening seed deposits to 45 days ago so live DBs have established baseline
+    session.query(Transaction).filter(
+        Transaction.kind == "cash_in",
+        Transaction.from_account_id.is_(None),
+        (Transaction.note.like("Initial%") | Transaction.idempotency_key.like("seed-opening-%")),
+    ).update(
+        {
+            "created_at": _utcnow() - timedelta(days=45),
+            "completed_at": _utcnow() - timedelta(days=45),
+        },
+        synchronize_session=False,
+    )
+    session.flush()
 
     biller_count = 0
     for name, category, acc_no in DEMO_BILLERS:
