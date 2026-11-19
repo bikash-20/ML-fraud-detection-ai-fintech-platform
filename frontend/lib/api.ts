@@ -195,13 +195,37 @@ export async function speak(text: string): Promise<Blob> {
   return r.blob();
 }
 
+async function fetchWithRetry(
+  url: string,
+  options: RequestInit,
+  retries = 2,
+  delay = 2000
+): Promise<Response> {
+  try {
+    const res = await fetch(url, options);
+    if ((res.status === 502 || res.status === 503 || res.status === 504) && retries > 0) {
+      console.warn(`[API] Backend returned ${res.status} (container waking up?), retrying in ${delay}ms...`);
+      await new Promise((r) => setTimeout(r, delay));
+      return fetchWithRetry(url, options, retries - 1, delay * 1.5);
+    }
+    return res;
+  } catch (err) {
+    if (retries > 0) {
+      console.warn(`[API] Fetch error for ${url}, retrying in ${delay}ms...`, err);
+      await new Promise((r) => setTimeout(r, delay));
+      return fetchWithRetry(url, options, retries - 1, delay * 1.5);
+    }
+    throw err;
+  }
+}
+
 async function httpJson<T>(
   method: string,
   path: string,
   body?: unknown,
   init?: RequestInit
 ): Promise<T> {
-  const r = await fetch(`${BASE}${path}`, {
+  const r = await fetchWithRetry(`${BASE}${path}`, {
     method,
     headers: body ? { "Content-Type": "application/json" } : undefined,
     body: body ? JSON.stringify(body) : undefined,
@@ -232,7 +256,7 @@ async function adminHttpJson<T>(
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...((init?.headers as Record<string, string>) || {}),
   };
-  const r = await fetch(path, {
+  const r = await fetchWithRetry(path, {
     method,
     headers,
     body: body ? JSON.stringify(body) : undefined,

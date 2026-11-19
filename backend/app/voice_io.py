@@ -232,7 +232,12 @@ def synthesize(text: str) -> bytes:
     Raises RuntimeError on failure — callers should surface the error to
     the user rather than silently falling back to a browser default voice.
     """
+    import re
     clean = " ".join((text or "").split()).strip()
+    # Pronunciation normalization: replace Bengali Taka symbol ৳ with 'Taka', @handles with clean name
+    clean = re.sub(r'৳\s*([\d,]+(?:\.\d+)?)', r'\1 Taka', clean)
+    clean = re.sub(r'BDT\s*([\d,]+(?:\.\d+)?)', r'\1 Taka', clean, flags=re.IGNORECASE)
+    clean = re.sub(r'@([a-zA-Z0-9_]+)', r'\1', clean)
     if not clean:
         # Return a tiny valid silent WAV so the client doesn't error on empty.
         return _silent_wav_bytes(duration_ms=10)

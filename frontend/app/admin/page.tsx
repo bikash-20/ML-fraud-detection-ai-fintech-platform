@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { api, maskPhone } from "@/lib/api";
-import { speakText } from "@/lib/speech";
+import { speakText, unlockAudio } from "@/lib/speech";
 import {
   Activity,
   AlertOctagon,
@@ -366,6 +366,7 @@ export default function AdminDashboardPage() {
 
   // Admin Voice Input Handlers
   async function startVoiceRecording() {
+    unlockAudio();
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
@@ -426,6 +427,7 @@ export default function AdminDashboardPage() {
 
   // Ask Admin AI with multi-turn history & word-by-word streaming
   async function handleSendAiQuery(customText?: string, fromVoice = false) {
+    unlockAudio();
     const q = customText || aiQuery;
     if (!q.trim()) return;
 
