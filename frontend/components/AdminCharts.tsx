@@ -33,9 +33,16 @@ export function AdminVolumeChart({ data }: { data: TimelineDataPoint[] }) {
     );
   }
 
+  const formatYAxis = (v: number) => {
+    if (v >= 10000000) return `৳${(v / 10000000).toFixed(1)}Cr`;
+    if (v >= 100000) return `৳${(v / 100000).toFixed(1)}L`;
+    if (v >= 1000) return `৳${(v / 1000).toFixed(0)}k`;
+    return `৳${v}`;
+  };
+
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <AreaChart data={data} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
+      <AreaChart data={data} margin={{ top: 8, right: 10, left: -4, bottom: 0 }}>
         <defs>
           <linearGradient id="volGrad" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#f0a585" stopOpacity={0.6} />
@@ -44,16 +51,16 @@ export function AdminVolumeChart({ data }: { data: TimelineDataPoint[] }) {
         </defs>
         <XAxis
           dataKey="date"
-          tick={{ fill: "#cec2ce", fontSize: 13, fontWeight: 500 }}
+          tick={{ fill: "#cec2ce", fontSize: 12, fontWeight: 500 }}
           axisLine={false}
           tickLine={false}
         />
         <YAxis
-          tick={{ fill: "#cec2ce", fontSize: 13, fontWeight: 500 }}
+          tick={{ fill: "#cec2ce", fontSize: 12, fontWeight: 500 }}
           axisLine={false}
           tickLine={false}
-          tickFormatter={(v) => `৳${v}`}
-          width={65}
+          tickFormatter={formatYAxis}
+          width={60}
         />
         <Tooltip
           contentStyle={{
@@ -71,6 +78,8 @@ export function AdminVolumeChart({ data }: { data: TimelineDataPoint[] }) {
           stroke="#f0a585"
           strokeWidth={2.5}
           fill="url(#volGrad)"
+          dot={{ r: 3, fill: "#f0a585", stroke: "#2d2330", strokeWidth: 1.5 }}
+          activeDot={{ r: 6, fill: "#f0a585", stroke: "#ffffff", strokeWidth: 2 }}
         />
       </AreaChart>
     </ResponsiveContainer>

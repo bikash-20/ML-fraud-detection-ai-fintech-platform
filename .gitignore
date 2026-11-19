@@ -32,3 +32,4 @@ frontend/tsconfig.tsbuildinfo
 *.gguf
 *.safetensors
 .cache/
+.vercel

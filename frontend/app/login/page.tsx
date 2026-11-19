@@ -111,32 +111,41 @@ export default function LoginPage() {
 
             {/* Login Form */}
             <form onSubmit={handleFormLogin} className="space-y-4">
-              {/* Quick autofill suggestion chips */}
-              <div className="flex items-center gap-2 overflow-x-auto pb-0.5 text-xs text-secondary">
-                <span className="shrink-0 text-peach-400 font-bold flex items-center gap-1 text-xs">
-                  <Zap size={14} /> Fill:
-                </span>
-                <button
-                  type="button"
-                  onClick={() => autofill("bikash")}
-                  className="px-3 py-1.5 rounded-full bg-white/10 hover:bg-peach-500/25 border border-white/15 hover:border-peach-500/50 text-cream text-xs font-semibold transition-all shrink-0"
-                >
-                  bikash (Boss)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => autofill("rishad")}
-                  className="px-3 py-1.5 rounded-full bg-white/10 hover:bg-peach-500/25 border border-white/15 hover:border-peach-500/50 text-cream text-xs font-semibold transition-all shrink-0"
-                >
-                  rishad
-                </button>
-                <button
-                  type="button"
-                  onClick={() => autofill("arman")}
-                  className="px-3 py-1.5 rounded-full bg-white/10 hover:bg-peach-500/25 border border-white/15 hover:border-peach-500/50 text-cream text-xs font-semibold transition-all shrink-0"
-                >
-                  arman
-                </button>
+              {/* Quick autofill suggestion chips exposing all system personas */}
+              <div className="space-y-1.5 pb-1">
+                <div className="text-xs font-bold text-peach-400 flex items-center gap-1.5">
+                  <Zap size={14} /> Quick Demo Logins:
+                </div>
+                <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto pr-1">
+                  {[
+                    { handle: "bikash", label: "bikash (Boss)", tier: "Student" },
+                    { handle: "rishad", label: "rishad", tier: "Salaried" },
+                    { handle: "arman", label: "arman", tier: "Shopkeeper" },
+                    { handle: "tahzib", label: "tahzib", tier: "Agent Point" },
+                    { handle: "srijan", label: "srijan", tier: "Business" },
+                    { handle: "mahdin", label: "mahdin", tier: "Unverified" },
+                    { handle: "rahim", label: "rahim", tier: "Personal" },
+                  ].map((p) => {
+                    const isSelected = email.startsWith(p.handle);
+                    return (
+                      <button
+                        key={p.handle}
+                        type="button"
+                        onClick={() => autofill(p.handle)}
+                        className={`px-2.5 py-1 rounded-lg border text-xs font-medium transition-all flex items-center gap-1.5 ${
+                          isSelected
+                            ? "bg-peach-500/30 border-peach-500 text-cream font-bold shadow-sm shadow-peach-500/20"
+                            : "bg-white/5 hover:bg-white/10 border-white/15 hover:border-peach-500/40 text-lavender hover:text-cream"
+                        }`}
+                      >
+                        <span>{p.label}</span>
+                        <span className="text-[10px] px-1 py-0.2 rounded bg-white/10 text-peach-300 font-mono">
+                          {p.tier}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Email / Username */}

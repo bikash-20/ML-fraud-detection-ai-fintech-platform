@@ -148,6 +148,49 @@ def seed(session: Session) -> dict:
         admin.is_active = True
         session.flush()
 
+    # Seed realistic 14-day historical transactions so Admin Volume & Activity chart is vibrant
+    non_cash_in = session.query(Transaction).filter(Transaction.kind != "cash_in").count()
+    if non_cash_in < 10:
+        bikash_acct = session.query(Account).join(User).filter(User.handle == "bikash").first()
+        rishad_acct = session.query(Account).join(User).filter(User.handle == "rishad").first()
+        arman_acct = session.query(Account).join(User).filter(User.handle == "arman").first()
+        tahzib_acct = session.query(Account).join(User).filter(User.handle == "tahzib").first()
+        srijan_acct = session.query(Account).join(User).filter(User.handle == "srijan").first()
+        mahdin_acct = session.query(Account).join(User).filter(User.handle == "mahdin").first()
+        rahim_acct = session.query(Account).join(User).filter(User.handle == "rahim").first()
+
+        if rishad_acct and arman_acct and tahzib_acct and srijan_acct:
+            hist_samples = [
+                (13, arman_acct, rishad_acct, Decimal("1250.00"), "send", "Campus study supplies"),
+                (12, rishad_acct, arman_acct, Decimal("3200.00"), "send", "Provisions & grocery"),
+                (11, tahzib_acct, arman_acct, Decimal("26000.00"), "send", "Agent customer settlement"),
+                (10, arman_acct, srijan_acct, Decimal("680.00"), "send", "Hardware supplies"),
+                (9, srijan_acct, arman_acct, Decimal("85000.00"), "send", "Wholesale inventory supply"),
+                (8, rishad_acct, arman_acct, Decimal("2400.00"), "send", "Weekly grocery"),
+                (7, arman_acct, srijan_acct, Decimal("42000.00"), "send", "Merchant stock replenishment"),
+                (6, rishad_acct, tahzib_acct, Decimal("600.00"), "send", "Utility recharge"),
+                (5, tahzib_acct, arman_acct, Decimal("35000.00"), "send", "Agent merchant cash-out"),
+                (4, srijan_acct, tahzib_acct, Decimal("120000.00"), "send", "Commercial liquidity transfer"),
+                (3, mahdin_acct if mahdin_acct else arman_acct, arman_acct, Decimal("320.00"), "send", "Stationery & printing"),
+                (2, rishad_acct, srijan_acct, Decimal("12000.00"), "send", "Office equipment purchase"),
+                (1, rahim_acct if rahim_acct else arman_acct, arman_acct, Decimal("2200.00"), "send", "Household provisions"),
+            ]
+            for day_off, from_a, to_a, amt, kind, note in hist_samples:
+                tx_time = _utcnow() - timedelta(days=day_off, hours=3)
+                session.add(Transaction(
+                    idempotency_key=f"seed-hist-{day_off}-{int(tx_time.timestamp())}",
+                    initiator_user_id=from_a.user_id,
+                    from_account_id=from_a.id,
+                    to_account_id=to_a.id,
+                    amount_bdt=amt,
+                    kind=kind,
+                    status="completed",
+                    note=note,
+                    created_at=tx_time,
+                    completed_at=tx_time,
+                ))
+            session.flush()
+
     # Backfill or seed initial fraud assessments on existing transactions if empty
     existing_assessments = session.query(FraudAssessment).count()
     if existing_assessments == 0:

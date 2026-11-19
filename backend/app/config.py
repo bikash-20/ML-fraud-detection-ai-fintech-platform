@@ -37,7 +37,7 @@ OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "").strip()
 OPENROUTER_URL = os.getenv("OPENROUTER_URL", "https://openrouter.ai/api/v1").strip()
 _openrouter_models = os.getenv(
     "OPENROUTER_MODELS",
-    "deepseek/deepseek-chat-v3-0324:free,qwen/qwen3-4b:free,meta-llama/llama-3.3-8b-instruct:free",
+    "google/gemma-4-31b-it:free,google/gemma-4-26b-a4b-it:free,nvidia/nemotron-3.5-lightning:free,inclusionai/ling-3.2-flash:free,thinkingmachines/inkling-2-small:free,x-ai/grok-4.7",
 )
 OPENROUTER_MODELS = [m.strip() for m in _openrouter_models.split(",") if m.strip()]
 
