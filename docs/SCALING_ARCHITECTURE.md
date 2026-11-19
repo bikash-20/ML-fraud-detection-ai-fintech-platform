@@ -4,7 +4,7 @@
 > [!IMPORTANT]
 > **Engineering Scope & Prototype Status Notice**:
 > - **What We Built & Verified**: The current Wallet system is a functional, feature-complete working prototype consisting of a Next.js 14 frontend, FastAPI backend, real-time AI conversational agent, deterministic ACID transaction ledger, biometric face verification, dynamic user types and account tiers (Personal, Verified, Business), and a trained LightGBM ML fraud detection pipeline with 140 passing automated tests.
-> - **What We Proved**: Our ML models and causal feature store were trained and evaluated on a reproducible 300,000 synthetic transaction dataset (~90 days, Asia/Dhaka time, 2,000 users, 5 personas, 6 fraud archetypes), achieving 93.45% precision and 85.33% recall for LightGBM-only scoring on held-out temporal splits.
+> - **What We Proved**: Our ML models and causal feature store were trained and evaluated on a reproducible 300,000 synthetic transaction dataset (~90 days, Asia/Dhaka time, 2,000 users, 5 personas, 6 fraud archetypes), achieving 93.45% precision and 70.72% recall (~29.3% residual miss rate actively mitigated by regulatory tier caps and biometric step-up) for LightGBM-only scoring on a 45,000-transaction held-out temporal test set.
 > - **What Comes Next (Scalability Disclaimer)**: The **1 Million+ user target architecture** detailed in this document is a **proposed architecture, capacity planning model, and phased engineering roadmap**. Because the system has not yet been subjected to physical multi-node load testing at 1,000,000 concurrency, these high-scale figures are presented strictly as **capacity targets and future load-testing milestones**, not achieved production benchmarks.
 
 ---
