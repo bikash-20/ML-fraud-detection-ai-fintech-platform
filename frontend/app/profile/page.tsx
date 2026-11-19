@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { UserProfileDetails, api, maskPhone } from "@/lib/api";
 import { readActiveUserId } from "@/lib/session";
+import { RenderWakeupLoading } from "@/components/RenderWakeupLoading";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -78,12 +79,15 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-plum-950 text-cream flex items-center justify-center p-4">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-2 border-peach-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-secondary text-sm">Loading dynamic profile & tier limits…</p>
-        </div>
-      </div>
+      <RenderWakeupLoading
+        title="Profile & Compliance"
+        subtitle="Loading dynamic BDT limits, KYC verification & spending profile…"
+        onRetry={() => {
+          const uid = readActiveUserId();
+          if (uid) loadProfile(uid);
+        }}
+        loginPath="/login"
+      />
     );
   }
 

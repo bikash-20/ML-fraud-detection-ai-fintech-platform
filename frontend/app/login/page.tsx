@@ -7,10 +7,13 @@ import { User, api } from "@/lib/api";
 import { writeActiveUserId } from "@/lib/session";
 import {
   ArrowRight,
+  Cloud,
   Eye,
   EyeOff,
   Lock,
   Mail,
+  RefreshCw,
+  Server,
   ShieldCheck,
   Sparkles,
   Zap,
@@ -27,12 +30,33 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [submitSeconds, setSubmitSeconds] = useState(0);
 
   useEffect(() => {
+    let timer: NodeJS.Timeout | null = null;
+    if (submitting) {
+      setSubmitSeconds(0);
+      timer = setInterval(() => setSubmitSeconds((s) => s + 1), 1000);
+    } else {
+      setSubmitSeconds(0);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [submitting]);
+
+  const loadUsers = () => {
     api
       .listUsers()
       .then((u) => setUsers(u))
-      .catch((e) => setError(`Couldn't reach server: ${(e as Error).message}`));
+      .catch((e) => {
+        // Silent retry while Render is waking up
+        setTimeout(loadUsers, 4000);
+      });
+  };
+
+  useEffect(() => {
+    loadUsers();
   }, []);
 
   async function handleFormLogin(e: React.FormEvent) {
@@ -232,7 +256,7 @@ export default function LoginPage() {
                 {submitting ? (
                   <>
                     <span className="w-4 h-4 border-2 border-plum-950 border-t-transparent rounded-full animate-spin" />
-                    <span>Authenticating…</span>
+                    <span>Authenticating… {submitSeconds > 2 ? `(${submitSeconds}s)` : ""}</span>
                   </>
                 ) : (
                   <>
@@ -241,6 +265,19 @@ export default function LoginPage() {
                   </>
                 )}
               </button>
+
+              {/* Render Wake-Up Notification during cold-start authentication */}
+              {submitting && submitSeconds >= 2 && (
+                <div className="p-3 rounded-xl bg-peach-500/15 border border-peach-500/30 text-peach-200 text-xs flex items-start gap-2.5 animate-in fade-in transition-all">
+                  <Cloud className="w-4 h-4 text-peach-400 shrink-0 mt-0.5 animate-pulse" />
+                  <div>
+                    <span className="font-semibold text-peach-300">Waking up Render backend container ({submitSeconds}s)…</span>
+                    <p className="text-lavender/80 text-[11px] mt-0.5">
+                      Render free-tier instances sleep automatically when idle. Initial wake-up takes ~20–35s. Please hold on!
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* Divider */}
               <div className="relative my-4 flex items-center justify-center">
@@ -291,6 +328,18 @@ export default function LoginPage() {
                 <span>Admin Portal</span>
                 <ArrowRight size={12} />
               </Link>
+            </div>
+
+            {/* Render Free-Tier Wake-Up Notice for Evaluators / Judges */}
+            <div className="mt-3.5 pt-3 border-t border-white/5 flex items-center justify-between text-[11px] text-lavender/70 font-medium">
+              <span className="flex items-center gap-1.5">
+                <Cloud size={13} className="text-peach-400" />
+                Render Cloud: Free-tier container wakes up in ~20–35s
+              </span>
+              <span className="flex items-center gap-1 text-emerald-400 font-mono text-[10px]">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                Ready
+              </span>
             </div>
           </div>
         </div>

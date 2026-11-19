@@ -16,6 +16,7 @@ import { ChatBar, ChatBarHandle } from "@/components/ChatBar";
 import { SplitForm } from "@/components/SplitForm";
 import { SavingsGoals } from "@/components/SavingsGoals";
 import { FinancialIntelligenceCard } from "@/components/FinancialIntelligenceCard";
+import { RenderWakeupLoading } from "@/components/RenderWakeupLoading";
 import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
 import { HandCoins, LogOut, Settings as SettingsIcon, User as UserIcon } from "lucide-react";
@@ -86,17 +87,36 @@ export default function DashboardPage() {
     setAuthChecked(true);
   }, [router]);
 
-  // Load users after auth check.
+  const [initError, setInitError] = useState<string | null>(null);
+
+  // Load users after auth check with auto-retry during Render wake-up
+  const fetchUsers = useCallback(() => {
+    setInitError(null);
+    api.listUsers()
+      .then((u) => {
+        setUsers(u);
+        setInitError(null);
+        if (activeId !== null && !u.some((x) => x.id === activeId)) {
+          clearActiveUserId();
+          router.replace("/login");
+        }
+      })
+      .catch((err) => {
+        const msg = (err as Error).message || "Backend wake-up timeout";
+        setInitError(msg);
+        // Automatically retry after 3.5s while Render container is waking up
+        setTimeout(() => {
+          if (!users.length) {
+            fetchUsers();
+          }
+        }, 3500);
+      });
+  }, [activeId, router, users.length]);
+
   useEffect(() => {
     if (!authChecked) return;
-    api.listUsers().then((u) => {
-      setUsers(u);
-      if (activeId !== null && !u.some((x) => x.id === activeId)) {
-        clearActiveUserId();
-        router.replace("/login");
-      }
-    });
-  }, [authChecked, activeId, router]);
+    fetchUsers();
+  }, [authChecked, fetchUsers]);
 
   // Load data when active user changes.
   const refresh = useCallback(async () => {
@@ -422,9 +442,13 @@ export default function DashboardPage() {
 
   if (!authChecked || !activeUser || activeId === null) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-cream/70 text-sm">Loading demo…</div>
-      </div>
+      <RenderWakeupLoading
+        title="Wallet AI Platform"
+        subtitle="Initializing ledger session and verifying account credentials…"
+        onRetry={fetchUsers}
+        error={initError}
+        loginPath="/login"
+      />
     );
   }
 

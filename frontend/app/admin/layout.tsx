@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { api } from "@/lib/api";
 import { clearAdminToken, readAdminToken } from "@/lib/session";
+import { RenderWakeupLoading } from "@/components/RenderWakeupLoading";
 import {
   ShieldCheck,
   LogOut,
@@ -32,32 +33,44 @@ export default function AdminLayout({
     role: string;
   } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   // Skip auth check on login page
   const isLoginPage = pathname === "/admin/login";
 
-  useEffect(() => {
-    if (isLoginPage) {
-      setLoading(false);
-      return;
-    }
-
+  const verifyAdmin = () => {
     const token = readAdminToken();
     if (!token) {
       router.replace("/admin/login");
       return;
     }
 
+    setAuthError(null);
     api
       .adminMe()
       .then((data) => {
         setAdmin(data);
         setLoading(false);
       })
-      .catch(() => {
-        clearAdminToken();
-        router.replace("/admin/login");
+      .catch((err) => {
+        const msg = (err as Error).message || "";
+        if (msg.includes("401") || msg.includes("403")) {
+          clearAdminToken();
+          router.replace("/admin/login");
+        } else {
+          // Render backend may be waking up from sleep — retry after 3.5s
+          setAuthError("Connecting to backend... Free tier instance waking up.");
+          setTimeout(verifyAdmin, 3500);
+        }
       });
+  };
+
+  useEffect(() => {
+    if (isLoginPage) {
+      setLoading(false);
+      return;
+    }
+    verifyAdmin();
   }, [router, isLoginPage]);
 
   function handleLogout() {
@@ -72,14 +85,13 @@ export default function AdminLayout({
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-2 border-peach-500 border-t-transparent rounded-full animate-spin" />
-          <div className="text-sm text-lavender font-semibold tracking-wide">
-            Verifying Admin Authorization…
-          </div>
-        </div>
-      </div>
+      <RenderWakeupLoading
+        title="Fraud Intelligence Admin"
+        subtitle="Verifying administrative session and connecting to live risk telemetry…"
+        onRetry={verifyAdmin}
+        error={authError}
+        loginPath="/admin/login"
+      />
     );
   }
 
