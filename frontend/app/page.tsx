@@ -250,8 +250,16 @@ export default function DashboardPage() {
       safeSpeak(r.text);
       await refresh();
     } catch (e) {
-      setToast(`Confirm failed: ${(e as Error).message}`);
-      safeSpeak("I could not confirm that transfer.");
+      const err = e as Error;
+      if (err.message?.includes("404") || err.message?.includes("pending_id")) {
+        setReviewResp(null);
+        pendingKeyRef.current = null;
+        setToast("Transfer session expired or reset. Please tap Send again.");
+        safeSpeak("That transfer session expired. Please initiate the transfer again.");
+      } else {
+        setToast(`Confirm failed: ${err.message}`);
+        safeSpeak("I could not confirm that transfer.");
+      }
     } finally {
       setWorking(false);
     }
@@ -275,8 +283,15 @@ export default function DashboardPage() {
       safeSpeak(r.text);
       await refresh();
     } catch (e) {
-      setToast(`Cancel failed: ${(e as Error).message}`);
-      safeSpeak("I could not cancel that transfer.");
+      const err = e as Error;
+      if (err.message?.includes("404") || err.message?.includes("pending_id")) {
+        setReviewResp(null);
+        pendingKeyRef.current = null;
+        setToast("Session was already cleared.");
+      } else {
+        setToast(`Cancel failed: ${err.message}`);
+        safeSpeak("I could not cancel that transfer.");
+      }
     } finally {
       setWorking(false);
     }
