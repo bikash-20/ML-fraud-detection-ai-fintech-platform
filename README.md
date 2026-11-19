@@ -16,8 +16,13 @@ Balances, recipients, amounts, transaction state, idempotency, and money movemen
 
 > **Reviewer Transparency & Video Demonstration**:
 > - **Source Repository**: [https://github.com/bikash-20/ML-fraud-detection-ai-fintech-platform](https://github.com/bikash-20/ML-fraud-detection-ai-fintech-platform)
+> - **Live Web Application (Vercel)**: [https://frontend-alpha-inky-87.vercel.app](https://frontend-alpha-inky-87.vercel.app)
+> - **Production REST API (Render)**: [https://wallet-fintech-backend.onrender.com](https://wallet-fintech-backend.onrender.com)
+> - **API Health Check & Diagnostics**: [https://wallet-fintech-backend.onrender.com/health](https://wallet-fintech-backend.onrender.com/health)
+> - **Interactive API Documentation (Swagger)**: [https://wallet-fintech-backend.onrender.com/docs](https://wallet-fintech-backend.onrender.com/docs)
 > - **Proposal Whitepaper PDF**: [WALLET_AI_FINTECH_PROPOSAL.pdf](WALLET_AI_FINTECH_PROPOSAL.pdf) *(3-page physical bound)*
 > - **Scaling Architecture**: [docs/SCALING_ARCHITECTURE.md](docs/SCALING_ARCHITECTURE.md)
+> - **Continuous Integration & Deployment**: Automated GitHub Actions pipeline (`.github/workflows/ci.yml`) verifying all 140 pytest test cases and Next.js builds on every push to `main`, with auto-deployment to Vercel and Render.
 > - **Live Video Demonstration**: A live recorded video walkthrough demonstrating end-to-end voice intent execution, Face ID biometric confirmation, and real-time admin fraud triage is provided in our companion competition submission video.
 > - **Empirical Reproducibility**: All claims made in our proposal (140 automated scenario tests, LightGBM 93.45% precision, 0.8212 PR-AUC, and sub-millisecond fraud scoring) can be verified locally using the copy-paste commands below.
 
