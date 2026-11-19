@@ -6,9 +6,10 @@ const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ["recharts", "lucide-react"],
   async rewrites() {
+    const backendUrl = (process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
     return [
-      { source: "/admin/api/:path*", destination: "http://127.0.0.1:8000/admin/api/:path*" },
-      { source: "/api/:path*", destination: "http://127.0.0.1:8000/:path*" },
+      { source: "/admin/api/:path*", destination: `${backendUrl}/admin/api/:path*` },
+      { source: "/api/:path*", destination: `${backendUrl}/:path*` },
     ];
   },
   async headers() {

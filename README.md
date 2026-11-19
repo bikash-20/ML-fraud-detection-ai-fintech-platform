@@ -15,7 +15,7 @@ Balances, recipients, amounts, transaction state, idempotency, and money movemen
 ## 🧪 Independent Reviewer & Judge Verification Guide
 
 > **Reviewer Transparency & Video Demonstration**:
-> - **Source Repository**: [https://github.com/bikashpubg678-maker/wallet-v2](https://github.com/bikashpubg678-maker/wallet-v2)
+> - **Source Repository**: [https://github.com/bikash-20/ML-fraud-detection-ai-fintech-platform](https://github.com/bikash-20/ML-fraud-detection-ai-fintech-platform)
 > - **Proposal Whitepaper PDF**: [WALLET_AI_FINTECH_PROPOSAL.pdf](WALLET_AI_FINTECH_PROPOSAL.pdf) *(3-page physical bound)*
 > - **Scaling Architecture**: [docs/SCALING_ARCHITECTURE.md](docs/SCALING_ARCHITECTURE.md)
 > - **Live Video Demonstration**: A live recorded video walkthrough demonstrating end-to-end voice intent execution, Face ID biometric confirmation, and real-time admin fraud triage is provided in our companion competition submission video.
