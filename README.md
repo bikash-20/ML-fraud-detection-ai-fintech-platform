@@ -1,6 +1,5 @@
 # Wallet
 live link:https://frontend-alpha-inky-87.vercel.app/
-video explanation link: https://youtu.be/kd7_fTw1weo?si=c0mJeLqyCNu-jX6y
 <img width="1280" height="719" alt="image" src="https://github.com/user-attachments/assets/29feeecf-6462-41c2-b3ce-ed65309817ae" />
 
 ## Digital AI Money Movement & Fraud Intelligence Platform
@@ -18,6 +17,7 @@ Balances, recipients, amounts, transaction state, idempotency, and money movemen
 ## 🧪 Independent Reviewer & Judge Verification Guide
 
 > **Reviewer Transparency & Video Demonstration**:
+> video explanation link: https://youtu.be/kd7_fTw1weo?si=c0mJeLqyCNu-jX6y
 > - **Source Repository**: [https://github.com/bikash-20/ML-fraud-detection-ai-fintech-platform](https://github.com/bikash-20/ML-fraud-detection-ai-fintech-platform)
 > - **Live Web Application (Vercel)**: [https://frontend-alpha-inky-87.vercel.app](https://frontend-alpha-inky-87.vercel.app)
 > - **Production REST API (Render)**: [https://wallet-fintech-backend.onrender.com](https://wallet-fintech-backend.onrender.com)
