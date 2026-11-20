@@ -487,7 +487,7 @@ HTML_CONTENT = r"""<!DOCTYPE html>
 
     <div class="footer-bar">
       <span>WALLET Autonomous FinTech • Source: <a href="https://github.com/bikash-20/ML-fraud-detection-ai-fintech-platform" style="color: #475569; text-decoration: underline;">github.com/bikash-20/ML-fraud-detection-ai-fintech-platform</a></span>
-      <span>Confidential • Prepared for Academic & Regulatory Review • Page 1 of 3</span>
+      <span>Confidential • Prepared for MU CSE FEST-2026 HACKATHON • Page 1 of 3</span>
     </div>
   </div>
 
@@ -669,7 +669,7 @@ HTML_CONTENT = r"""<!DOCTYPE html>
 
     <div class="footer-bar">
       <span>WALLET Autonomous FinTech • Source: <a href="https://github.com/bikash-20/ML-fraud-detection-ai-fintech-platform" style="color: #475569; text-decoration: underline;">github.com/bikash-20/ML-fraud-detection-ai-fintech-platform</a></span>
-      <span>Confidential • Prepared for Academic & Regulatory Review • Page 2 of 3</span>
+      <span>Confidential • Prepared for MU CSE FEST-2026 HACKATHON • Page 2 of 3</span>
     </div>
   </div>
 
@@ -950,7 +950,7 @@ HTML_CONTENT = r"""<!DOCTYPE html>
 
     <div class="footer-bar">
       <span>WALLET Autonomous FinTech • Source: <a href="https://github.com/bikash-20/ML-fraud-detection-ai-fintech-platform" style="color: #475569; text-decoration: underline;">github.com/bikash-20/ML-fraud-detection-ai-fintech-platform</a></span>
-      <span>Confidential • Prepared for Academic & Regulatory Review • Page 3 of 3</span>
+      <span>Confidential • Prepared for MU CSE FEST-2026 HACKATHON • Page 3 of 3</span>
     </div>
   </div>
 
@@ -986,12 +986,16 @@ def generate_pdf():
     
     print(f"Generated PDF at {pdf_path} and {root_pdf_path} ({len(pdf_bytes)} bytes)")
 
-    # Check page count with PyMuPDF
+    # Check page count and render preview PNGs with PyMuPDF
     doc = fitz.open(pdf_path)
     page_count = len(doc)
     print(f"Total Page Count: {page_count}")
     for i in range(page_count):
         p = doc[i]
+        pix = p.get_pixmap(dpi=150)
+        png_path = f"docs/proposal_page_{i+1}.png"
+        pix.save(png_path)
+        print(f"Rendered {png_path}")
         blocks = p.get_text('blocks')
         last_content = [b for b in blocks if "WALLET Autonomous" not in b[4]]
         max_content_y = max(b[3] for b in last_content) if last_content else 0
