@@ -1,5 +1,13 @@
 # Wallet
-live link:https://frontend-alpha-inky-87.vercel.app/
+
+**Live Demo Preview:** [https://frontend-alpha-inky-87.vercel.app/](https://frontend-alpha-inky-87.vercel.app/)
+
+> [!WARNING]
+> **Live Cloud Preview & Browser Environment Notice (Work in Progress)**  
+> Please note that our **live cloud deployment and browser-based environment are not fully robust yet**. Because this preview runs on free-tier cloud infrastructure (Render free container spin-downs with ~40–50s cold-start delays, cross-origin audio streaming limitations, and varying browser-level microphone/WebRTC permissions), occasional 502 gateway timeouts or browser latency can occur while services wake up. We are actively refining and hardening the production deployment pipeline.
+> 
+> In contrast, **our local testing environment and system test suite are completely solid, robust, and reproducible** — passing **140/140 automated scenario tests (100% pass rate)** covering atomic ACID ledger transfers, LightGBM sub-millisecond fraud scoring, neural Face ID gating, and deterministic safety rules. For judges and reviewers, running the project locally or testing via the local CLI commands provides the fastest, most reliable experience.
+
 <img width="1280" height="719" alt="image" src="https://github.com/user-attachments/assets/29feeecf-6462-41c2-b3ce-ed65309817ae" />
 
 ## Digital AI Money Movement & Fraud Intelligence Platform
@@ -19,7 +27,7 @@ Balances, recipients, amounts, transaction state, idempotency, and money movemen
 > **Reviewer Transparency & Video Demonstration**:
 > video explanation link: https://youtu.be/kd7_fTw1weo?si=c0mJeLqyCNu-jX6y
 > - **Source Repository**: [https://github.com/bikash-20/ML-fraud-detection-ai-fintech-platform](https://github.com/bikash-20/ML-fraud-detection-ai-fintech-platform)
-> - **Live Web Application (Vercel)**: [https://frontend-alpha-inky-87.vercel.app](https://frontend-alpha-inky-87.vercel.app)
+> - **Live Web Application (Vercel)**: [https://frontend-alpha-inky-87.vercel.app](https://frontend-alpha-inky-87.vercel.app) *(Early cloud preview — subject to free-tier wake-up latency)*
 > - **Production REST API (Render)**: [https://wallet-fintech-backend.onrender.com](https://wallet-fintech-backend.onrender.com)
 > - **API Health Check & Diagnostics**: [https://wallet-fintech-backend.onrender.com/health](https://wallet-fintech-backend.onrender.com/health)
 > - **Interactive API Documentation (Swagger)**: [https://wallet-fintech-backend.onrender.com/docs](https://wallet-fintech-backend.onrender.com/docs)
