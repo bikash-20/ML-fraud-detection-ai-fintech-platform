@@ -26,7 +26,7 @@ Balances, recipients, amounts, transaction state, idempotency, and money movemen
 
 > **Reviewer Transparency, Audio Brief & Video Demonstration**:
 > - **Video Walkthrough Demonstration**: [https://youtu.be/kd7_fTw1weo?si=c0mJeLqyCNu-jX6y](https://youtu.be/kd7_fTw1weo?si=c0mJeLqyCNu-jX6y)
-> - **Executive Audio Overview Brief (1:52 min)**: [docs/wallet_ai_audio_overview.mp3](docs/wallet_ai_audio_overview.mp3)
+> - **Executive Audio Overview Brief (1:42 min)**: [docs/wallet_ai_audio_overview.mp3](docs/wallet_ai_audio_overview.mp3)
 > - **Source Repository**: [https://github.com/bikash-20/ML-fraud-detection-ai-fintech-platform](https://github.com/bikash-20/ML-fraud-detection-ai-fintech-platform)
 > - **Live Web Application (Vercel)**: [https://frontend-alpha-inky-87.vercel.app](https://frontend-alpha-inky-87.vercel.app) *(Early cloud preview — subject to free-tier wake-up latency)*
 > - **Production REST API (Render)**: [https://wallet-fintech-backend.onrender.com](https://wallet-fintech-backend.onrender.com)
@@ -37,11 +37,9 @@ Balances, recipients, amounts, transaction state, idempotency, and money movemen
 > - **Continuous Integration & Deployment**: Automated GitHub Actions pipeline (`.github/workflows/ci.yml`) verifying all 140 pytest test cases and Next.js builds on every push to `main`, with auto-deployment to Vercel and Render.
 > - **Empirical Reproducibility**: All claims made in our proposal (140 automated scenario tests, LightGBM 93.45% precision, 0.8212 PR-AUC, and sub-millisecond fraud scoring) can be verified locally using the copy-paste commands below.
 
-### 🎙️ Executive Audio Brief (1:52 min Overview)
+### 🎙️ Executive Audio Brief (1:42 min Overview)
 
 Listen to the rapid audio overview covering our voice accessibility engine, sub-millisecond LightGBM fraud net, behavioral spending baselines, and ACID ledger guarantees:
-
-https://github.com/user-attachments/assets/wallet_ai_audio_overview
 
 <audio controls src="https://github.com/bikash-20/ML-fraud-detection-ai-fintech-platform/raw/main/docs/wallet_ai_audio_overview.mp3">
   <source src="https://github.com/bikash-20/ML-fraud-detection-ai-fintech-platform/raw/main/docs/wallet_ai_audio_overview.mp3" type="audio/mpeg">
